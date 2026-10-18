@@ -1,0 +1,10 @@
+# `vercel deploy` uploads the working tree; keep secrets and local artefacts out of it.
+.env*
+!.env.example
+.next
+node_modules
+coverage
+*.tsbuildinfo
+supabase/.temp
+supabase/.branches
+Technical_Challenge_Data/.~lock*

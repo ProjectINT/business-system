@@ -20,13 +20,17 @@ export function loadFile<E extends Entity>(entity: E, path: string): ParsedFile<
   return parseCsv(entity, bytes, fileName);
 }
 
-/** All five files of a directory, by their standard names (PLAN.md 5.1). Source files are never written. */
+/**
+ * All five files of a directory, by their standard names (PLAN.md 5.1). Source files are never written.
+ * The directory comes from the caller, so the bundler must not trace it: a dynamic path would pull the
+ * whole project into the server output. The sample files are included by `outputFileTracingIncludes`.
+ */
 export function loadDataset(dir: string = DEFAULT_DATA_DIR): Dataset {
-  const resolved = resolve(dir);
+  const resolved = resolve(/* turbopackIgnore: true */ dir);
   const files = {} as { [E in Entity]: Dataset["files"][E] };
   const rows = {} as { [E in Entity]: Dataset["rows"][E] };
   for (const entity of ENTITIES) {
-    const parsed = loadFile(entity, join(resolved, FILE_NAMES[entity]));
+    const parsed = loadFile(entity, join(/* turbopackIgnore: true */ resolved, FILE_NAMES[entity]));
     files[entity] = parsed.file;
     (rows as Record<Entity, unknown>)[entity] = parsed.rows;
   }

@@ -1,0 +1,30 @@
+[sqlfluff]
+dialect = postgres
+templater = raw
+# LT05: длинные строки допустимы (комментарии, check-выражения)
+exclude_rules = LT05
+max_line_length = 0
+
+[sqlfluff:indentation]
+tab_space_size = 2
+indent_unit = space
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.types]
+extended_capitalisation_policy = lower
+
+# text[] без пробела перед скобкой
+[sqlfluff:layout:type:start_square_bracket]
+spacing_before = touch
+
+# Непрезервированные в Postgres слова, которые используются как имена колонок
+[sqlfluff:rules:references.keywords]
+ignore_words = action, cluster, comment, data, header, operation, summary, version

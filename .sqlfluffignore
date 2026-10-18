@@ -1,0 +1,2 @@
+# Миграции генерирует `supabase db diff` из supabase/schemas — их не правим руками
+supabase/migrations/

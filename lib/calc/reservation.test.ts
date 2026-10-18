@@ -33,7 +33,7 @@ describe("calculateReservation", () => {
     expect(c).toMatchObject({
       nights: 3,
       active: true,
-      dqStatus: "review",
+      dqStatus: "clean",
       managementFee: idr(612470n),
       netRental: idr(2990297n),
       expectedPayout: idr(2990297n),

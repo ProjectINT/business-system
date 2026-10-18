@@ -182,7 +182,7 @@ interface CheckContext {
 | DQ-08 | `otaFeeBounds`: 0 ≤ OTA ≤ GBV | брони | TS | `review` | R0102: −100 000 |
 | DQ-09 | `refundConsistent`: возврат ≤ GBV, возврат > 0 только у отмены | брони | TS | `exclude` | R0072 |
 | DQ-10 | `otaRateRange`: 0–25% | брони; `skip`, если DQ-08 = `fail` | TS | `review` | 0 |
-| DQ-11 | `directBookingOtaFee` | брони; `skip` для канала OTA | TS | `review`, вопрос финдиректору | 30 броней (31 строка: R0015 дважды, копия — `duplicate`) |
+| DQ-11 | `directBookingOtaFee` | брони; `skip` для канала OTA | TS | `info`: у прямой брони это отчисление в рекламный бюджет, вычитается как комиссия (PLAN.md, 15) | 30 броней (31 строка: R0015 дважды, копия — `duplicate`) |
 | DQ-12 | `stayOverlap` | активные брони; `skip` для отмен и уже исключённых | **SQL** | `decide`: случай — группа конфликта (7.5) | 68 пар, 86 броней, 32 группы, 17 вилл |
 | DQ-13 | `modifiedWithoutOrigin` | брони; `skip` для статусов, кроме modified | TS | `decide`: каждую modified-бронь принимает человек и вручную связывает с исходной (7.5) | 8 (R0143–R0150): 5 в группах конфликта, 3 отдельными случаями (R0143, R0144, R0147) |
 | DQ-14 | `paymentAmountMatches`: = GBV − OTA − возврат и ≤ GBV | платежи по существующей брони | TS | `review` | P0051: 3 998 667 > GBV 3 898 667 (из-за R0102) |

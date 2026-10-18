@@ -14,6 +14,7 @@ export {
   type Dashboard,
   type Headline,
   type OutsideGroup,
+  type PropertyFigures,
   type PropertyRow,
 } from "./dashboard";
 export {

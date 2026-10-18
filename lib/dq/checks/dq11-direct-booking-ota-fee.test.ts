@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { describeContract } from "../testing/contract";
 import { apart, datasetFrom, PROPERTY, RESERVATION } from "../testing/fixture";
-import { contextBefore, resultFor, runOn, skipsAlone, statusOf } from "../testing/run";
+import { contextBefore, resultFor, runOn, skipsAlone } from "../testing/run";
 import { dq11 } from "./dq11-direct-booking-ota-fee";
 
 const ds = datasetFrom({
@@ -24,12 +24,12 @@ describe("DQ-11", () => {
     expect(resultFor(report, "DQ-11", "R0002").outcome).toBe("pass");
   });
 
-  it("flags a direct booking with a fee; the amount in question is the fee, in IDR only", async () => {
+  it("reports a direct booking with a fee (the marketing fee) as information; it sets no status", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-11", "R0003")).toMatchObject({ outcome: "fail", details: { channel: "Direct", otaFee: 450000n }, amountIdr: 450000n });
-    expect(statusOf(report, "R0003")).toBe("review");
+    expect(resultFor(report, "DQ-11", "R0003")).toMatchObject({ outcome: "fail", details: { channel: "Direct", otaFee: 450000n } });
+    expect(resultFor(report, "DQ-11", "R0003").amountIdr).toBeUndefined();
+    expect(report.verdicts.find((v) => v.recordKey === "R0003")?.ruleIds).not.toContain("DQ-11");
     expect(resultFor(report, "DQ-11", "R0004").outcome).toBe("fail");
-    expect(resultFor(report, "DQ-11", "R0004").amountIdr).toBeUndefined();
   });
 
   it("skips a row already out, and alone rows whose channel or fee did not parse", async () => {

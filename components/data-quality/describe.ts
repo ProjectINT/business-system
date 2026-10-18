@@ -67,7 +67,7 @@ const FAIL: Readonly<Record<RuleId, (d: Details) => string>> = {
       .map((p) => (REFUND_PROBLEM[p] ?? (() => p))(d))
       .join("; ")}`,
   "DQ-10": (d) => `OTA fee ${num(d.otaFee)} is ${percent(d.rateBps)} of GBV ${num(d.gross)}, above ${percent(d.maxBps)}`,
-  "DQ-11": (d) => `${str(d.channel)} booking with an OTA fee of ${num(d.otaFee)}`,
+  "DQ-11": (d) => `${str(d.channel)} booking: the “OTA fee” of ${num(d.otaFee)} is a marketing fee`,
   "DQ-12": (d) =>
     `Overlaps ${list<{ with: string; from: string; to: string; nights: number; kind: string }>(d.pairs)
       .map((p) => `${p.with} ${p.from} → ${p.to} (${plural(p.nights, "night")}, ${KIND[p.kind] ?? p.kind})`)

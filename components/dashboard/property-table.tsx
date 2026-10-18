@@ -1,16 +1,18 @@
 "use client";
 
-import { Chip, SearchField, Table, Tooltip, type SortDescriptor } from "@heroui/react";
+// Figures by villa from clean records only, whatever the filter bar says: records under review are
+// never mixed into a cell. The switch shows, under each figure, the part they would bring.
+import { Chip, SearchField, Switch, Table, Tooltip, type SortDescriptor } from "@heroui/react";
 import { useMemo, useState } from "react";
 import type { View } from "@/lib/calc";
 import type { Dashboard, PropertyRow } from "@/lib/data";
-import { count, idrFull } from "@/lib/format";
+import { count, idrFull, signedFull } from "@/lib/format";
 
 type Row = View<PropertyRow>;
 type NumericKey = "nights" | "gross" | "otaFee" | "managementFee" | "operatingExpenses" | "ownerBalance" | "received" | "difference";
 
 const COLUMNS: { id: NumericKey; label: string; hint: string }[] = [
-  { id: "nights", label: "Nights", hint: "Nights of stay in the period; overlapping stays count twice" },
+  { id: "nights", label: "Nights", hint: "Nights of stay in the period; overlapping stays under review count twice" },
   { id: "gross", label: "Gross bookings", hint: "By nights of stay in the period" },
   { id: "otaFee", label: "OTA fees", hint: "By nights of stay" },
   { id: "managementFee", label: "Mgmt fees", hint: "Rate on check-in date × gross, by nights" },
@@ -20,9 +22,24 @@ const COLUMNS: { id: NumericKey; label: string; hint: string }[] = [
   { id: "difference", label: "Recon. difference", hint: "Received − expected, reservations checking out in the period" },
 ];
 
+/** The part of a figure that records under review bring; not in the figure itself. */
+function UnderReview({ value, inline = false }: { value: number; inline?: boolean }) {
+  if (value === 0) return null;
+  return (
+    <span
+      className={inline ? "ms-1 text-warning" : "block text-xs text-warning"}
+      title="Records under review: not in the figure"
+    >
+      {signedFull(value)}
+    </span>
+  );
+}
+
 export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dashboard["totals"]> }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortDescriptor>({ column: "gross", direction: "descending" });
+  const [shown, setShown] = useState(false);
+  const hasReview = rows.some((r) => COLUMNS.some((c) => r.underReview[c.id] !== 0));
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -41,19 +58,34 @@ export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dash
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-lg font-semibold">By villa</h2>
           <Chip size="sm" variant="soft">
             {visible.length}
           </Chip>
+          <span className="text-sm text-muted">
+            Clean records{shown && hasReview ? " · under each figure, the part records under review bring" : ""}
+          </span>
         </div>
-        <SearchField aria-label="Search villas" className="w-64" value={query} onChange={setQuery}>
-          <SearchField.Group>
-            <SearchField.SearchIcon />
-            <SearchField.Input placeholder="Search villa or cluster…" />
-            <SearchField.ClearButton />
-          </SearchField.Group>
-        </SearchField>
+        <div className="flex flex-wrap items-center gap-4">
+          {hasReview && (
+            <Switch size="sm" isSelected={shown} onChange={setShown}>
+              <Switch.Content className="text-sm text-muted">
+                <Switch.Control>
+                  <Switch.Thumb />
+                </Switch.Control>
+                Under review
+              </Switch.Content>
+            </Switch>
+          )}
+          <SearchField aria-label="Search villas" className="w-64" value={query} onChange={setQuery}>
+            <SearchField.Group>
+              <SearchField.SearchIcon />
+              <SearchField.Input placeholder="Search villa or cluster…" />
+              <SearchField.ClearButton />
+            </SearchField.Group>
+          </SearchField>
+        </div>
       </div>
 
       <Table>
@@ -115,9 +147,7 @@ export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dash
                   {COLUMNS.map((c) => (
                     <Table.Cell key={c.id} className="text-end tabular-nums">
                       {c.id === "nights" ? count(r[c.id]) : idrFull(r[c.id])}
-                      {c.id === "gross" && r.grossUnderReview !== 0 && (
-                        <span className="block text-xs text-warning">{idrFull(r.grossUnderReview)} in question</span>
-                      )}
+                      <UnderReview value={shown ? r.underReview[c.id] : 0} />
                     </Table.Cell>
                   ))}
                   <Table.Cell className="text-end">
@@ -142,12 +172,15 @@ export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dash
         <Table.Footer className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="text-muted">
             * Estimate: no owner payouts, opening balances or taxes in the source data. Totals are for the whole
-            selection, computed from the rows.
+            selection, computed from the clean rows.
           </span>
           <span className="tabular-nums">
-            Gross <span className="font-medium">{idrFull(totals.gross)}</span> · owner balance{" "}
-            <span className="font-medium">{idrFull(totals.ownerBalance)}</span> · received{" "}
+            Gross <span className="font-medium">{idrFull(totals.gross)}</span>
+            <UnderReview value={shown ? totals.underReview.gross : 0} inline /> · owner balance{" "}
+            <span className="font-medium">{idrFull(totals.ownerBalance)}</span>
+            <UnderReview value={shown ? totals.underReview.ownerBalance : 0} inline /> · received{" "}
             <span className="font-medium">{idrFull(totals.received)}</span>
+            <UnderReview value={shown ? totals.underReview.received : 0} inline />
           </span>
         </Table.Footer>
       </Table>

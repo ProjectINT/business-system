@@ -1,8 +1,8 @@
 "use client";
 
-// The data-quality page (PLAN.md 8, page 3): rows by status, control totals per file, a summary per
-// rule, the list of problems with filters, the cases a human will decide, the report «excluded
-// automatically», and the card of any row with every rule's result on it.
+// The data-quality page (PLAN.md 8, page 3): rows by status, control totals per file, gross by villa
+// clean and under review, a summary per rule, the list of problems with filters, the cases a human
+// will decide, the report «excluded automatically», and the card of any row with every rule's result on it.
 import { Alert, Card, Chip, Label, ListBox, SearchField, Select, Table, Tabs, Tooltip, type Key } from "@heroui/react";
 import { CircleCheck, CircleXmark } from "@gravity-ui/icons";
 import { useMemo, useState } from "react";
@@ -11,6 +11,7 @@ import type { RowEntity, Status } from "@/lib/dq";
 import { count, idrFull } from "@/lib/format";
 import { ACTION_LABEL, STATUS_META, STATUS_ORDER } from "@/components/status-meta";
 import { CaseList } from "./case-list";
+import { GbvChart, type GbvPoint } from "./gbv-chart";
 import { areaLabel, FILE_LABEL, FILE_ORDER } from "./labels";
 import { RecordDrawer } from "./record-drawer";
 import type { DataQualityModel, FileView, IssueView, RuleView } from "./view-of";
@@ -19,7 +20,7 @@ type Tab = "rules" | "problems" | "cases" | "excluded";
 
 const ALL = "all";
 
-export function DataQualityView({ model }: { model: DataQualityModel }) {
+export function DataQualityView({ model, gbv }: { model: DataQualityModel; gbv: GbvPoint[] }) {
   const [tab, setTab] = useState<Tab>("rules");
   const [rule, setRule] = useState<string>(ALL);
   const [open, setOpen] = useState<string | null>(null);
@@ -55,6 +56,7 @@ export function DataQualityView({ model }: { model: DataQualityModel }) {
 
       <StatusTiles model={model} onExcluded={() => setTab("excluded")} onCases={() => setTab("cases")} />
       <ControlTotals files={model.files} />
+      <GbvChart data={gbv} />
 
       <Tabs variant="secondary" selectedKey={tab} onSelectionChange={(k) => setTab(k as Tab)}>
         <Tabs.ListContainer>
@@ -319,7 +321,7 @@ function RulesTable({ rules, onShow }: { rules: RuleView[]; onShow: (id: string)
       <Table.Footer className="text-sm text-muted">
         Every rule gives every row of its area a verdict: pass, fail, or skip with a reason. A row that an earlier rule
         excluded is skipped by the later ones, so no amount is in question twice for one rule. “In question” is the rule’s own
-        amount: GBV of a booking, the payment, the OTA fee of a direct booking (DQ-11), the shortfall at check-in (DQ-16).
+        amount: GBV of a booking, the payment, the shortfall at check-in (DQ-16).
         Click a rule to see its problems.
       </Table.Footer>
     </Table>

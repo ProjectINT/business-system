@@ -52,7 +52,7 @@ describe("reference run at 2026-10-15", async () => {
       "payments.csv:77",
       "reservations.csv:152",
     ]);
-    expect(status("R0015")).toEqual(["duplicate", "review"]); // line 152 sorts before line 16; the first copy is a direct booking with a fee
+    expect(status("R0015")).toEqual(["duplicate", "review"]); // line 152 sorts before line 16; the first copy is unpaid by check-in (DQ-16)
     expect(failedKeys(report, "DQ-02")).toEqual([]);
   });
 
@@ -61,7 +61,7 @@ describe("reference run at 2026-10-15", async () => {
     expect(resultsOf(report, "DQ-22")).toHaveLength(20);
   });
 
-  it("stage 2: exclusions R0034, R0061, R0072, E0017; flags R0102; 30 direct bookings with an OTA fee", () => {
+  it("stage 2: exclusions R0034, R0061, R0072, E0017; flags R0102; 30 direct bookings with a marketing fee (information)", () => {
     expect(failedKeys(report, "DQ-04")).toEqual(["E0017", "P0017", "R0034"]);
     expect(resultFor(report, "DQ-04", "R0034").details).toEqual({ propertyId: "V999" });
     expect(resultFor(report, "DQ-04", "E0017").details).toEqual({ propertyId: "V777" });
@@ -189,8 +189,8 @@ describe("reference run at 2026-10-15", async () => {
     expect(resultsOf(report, "DQ-23").filter((r) => r.reason === "zero payment (DQ-15)")).toHaveLength(6);
   });
 
-  it("row statuses: 127 clean, 91 review, 131 pending, 6 excluded, 2 duplicate", () => {
-    expect(report.summary.counts).toEqual({ clean: 127, review: 91, pending: 131, excluded: 6, duplicate: 2, superseded: 0 });
+  it("row statuses: 131 clean, 87 review, 131 pending, 6 excluded, 2 duplicate", () => {
+    expect(report.summary.counts).toEqual({ clean: 131, review: 87, pending: 131, excluded: 6, duplicate: 2, superseded: 0 });
     const excluded = report.verdicts.filter((v) => v.status === "excluded").map((v) => v.recordKey).sort();
     expect(excluded).toEqual(["E0017", "P0017", "P0036", "R0034", "R0061", "R0072"]);
     const pending = report.verdicts.filter((v) => v.status === "pending");

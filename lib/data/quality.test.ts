@@ -128,7 +128,7 @@ describe("per rule", () => {
     expect(of("DQ-05").failsByAction).toEqual({ hold: 42, exclude: 1 });
     expect(of("DQ-12")).toMatchObject({ failsByAction: { decide: 86 }, amount: idr(801_601_913n) }); // GBV in overlaps
     expect(of("DQ-16")).toMatchObject({ failsByAction: { review: 109 }, amount: idr(841_172_821n) }); // shortfall at check-in
-    expect(of("DQ-11")).toMatchObject({ failsByAction: { review: 30 }, amount: idr(42_067_561n) }); // OTA fee on direct bookings
+    expect(of("DQ-11")).toMatchObject({ failsByAction: { info: 30 }, amount: idr(0n) }); // marketing fee on direct bookings: information
     expect(of("DQ-15")).toMatchObject({ failsByAction: { info: 7 }, amount: idr(0n) }); // nothing to sum
     expect(of("DQ-03")).toMatchObject({ outcomes: { pass: 357, fail: 0, skip: 0, error: 0 }, failsByAction: {} });
   });

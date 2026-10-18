@@ -1,8 +1,8 @@
 "use client";
 
-// Gross bookings by villa (PLAN.md 8: one chart), split into clean records and records under review:
-// how much of each villa's figure rests on rows in question. With the switch off, the part under
-// review is drawn faded — it is not in the figures but still visible.
+// Gross bookings by villa on the data-quality page (PLAN.md 8, page 3), split into clean records and
+// records under review: how much of each villa's figure rests on rows in question. Whole data range,
+// no filters, like the rest of the page.
 import { Card } from "@heroui/react";
 import {
   Bar,
@@ -57,28 +57,24 @@ function ChartTooltip({ active, payload }: TooltipContentProps<TooltipValueType,
   );
 }
 
-export function GbvChart({ data, includeReview }: { data: GbvPoint[]; includeReview: boolean }) {
-  const series = [
-    { key: "clean", label: "Clean records", color: COLORS.clean, opacity: 1 },
-    {
-      key: "underReview",
-      label: includeReview ? "Records under review" : "Under review (not counted)",
-      color: COLORS.underReview,
-      opacity: includeReview ? 1 : 0.35,
-    },
-  ] as const;
+const SERIES = [
+  { key: "clean", label: "Clean records", color: COLORS.clean },
+  { key: "underReview", label: "Records under review", color: COLORS.underReview },
+] as const;
+
+export function GbvChart({ data }: { data: GbvPoint[] }) {
 
   return (
     <Card className="gap-4">
       <Card.Header className="flex-row flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <Card.Title>Gross bookings by villa</Card.Title>
-          <Card.Description>Nights of stay in the period; overlaps and unpaid stays are under review</Card.Description>
+          <Card.Description>Nights of stay over the whole data range; overlaps and unpaid stays are under review</Card.Description>
         </div>
         <ul className="flex items-center gap-4 text-sm" aria-label="Legend">
-          {series.map((s) => (
+          {SERIES.map((s) => (
             <li key={s.key} className="flex items-center gap-2">
-              <span className="size-2.5 rounded-full" style={{ background: s.color, opacity: s.opacity }} />
+              <span className="size-2.5 rounded-full" style={{ background: s.color }} />
               <span className="text-muted">{s.label}</span>
             </li>
           ))}
@@ -92,18 +88,17 @@ export function GbvChart({ data, includeReview }: { data: GbvPoint[]; includeRev
               <XAxis dataKey="id" tickLine={false} axisLine={false} tickMargin={8} interval={0} fontSize={11} />
               <YAxis tickFormatter={axisTick} tickLine={false} axisLine={false} width={48} />
               <Tooltip content={ChartTooltip} cursor={{ fillOpacity: 0.06 }} />
-              {series.map((s, i) => (
+              {SERIES.map((s, i) => (
                 <Bar
                   key={s.key}
                   dataKey={s.key}
                   name={s.label}
                   stackId="gbv"
                   fill={s.color}
-                  fillOpacity={s.opacity}
                   stroke="var(--color-surface)"
                   strokeWidth={2}
                   maxBarSize={22}
-                  radius={i === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                  radius={i === SERIES.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
                 />
               ))}
             </BarChart>

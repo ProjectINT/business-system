@@ -1,9 +1,11 @@
 "use client";
 
 // The three blocks of PLAN.md 7.4, each labelled with its basis so that revenue and cash are not
-// mixed: accruals by nights of stay, cash by payment date, reconciliation by check-out. Next to every
-// total — the part of it that records under review bring (with them − without them).
-import { Card, Chip, Link, Tooltip } from "@heroui/react";
+// mixed: accruals by nights of stay, cash by payment date, reconciliation by check-out. A switch on
+// each block shows, next to every total, the part of it that records under review bring (with them −
+// without them).
+import { createContext, useContext, useState } from "react";
+import { Card, Chip, Link, Switch, Tooltip } from "@heroui/react";
 import { CircleInfo } from "@gravity-ui/icons";
 import type { OwnerBalanceGap, ReconciliationStatus, View } from "@/lib/calc";
 import type { Dashboard, Headline } from "@/lib/data";
@@ -23,8 +25,12 @@ interface Props {
   reconciliationHref: string;
 }
 
+/** Whether the block around shows the under-review part of its totals. */
+const ReviewShown = createContext(false);
+
 function UnderReview({ value, includeReview }: { value: number; includeReview: boolean }) {
-  if (value === 0) return null;
+  const shown = useContext(ReviewShown);
+  if (!shown || value === 0) return null;
   return (
     <span className="text-xs text-warning" title={`IDR ${idrFull(value)}`}>
       {includeReview ? `under review ${idrSignedCompact(value)}` : `${idrSignedCompact(value)} under review, not counted`}
@@ -66,7 +72,7 @@ function Metric({
   );
 }
 
-/** OTA fees split by the booking's channel; the two parts add up to the row above. */
+/** OTA fees split by the booking's channel; the two parts add up to the row above. On Direct it is the marketing fee. */
 function OtaFees({ props }: { props: Props }) {
   return (
     <div className="pb-1.5">
@@ -74,7 +80,7 @@ function OtaFees({ props }: { props: Props }) {
       <div className="ms-1 flex flex-col border-s border-separator ps-3">
         <Metric label="OTA bookings" field="otaFeeOta" props={props} nested />
         <Metric
-          label="Direct bookings"
+          label="Direct bookings: marketing"
           field="otaFeeDirect"
           props={props}
           nested
@@ -84,8 +90,8 @@ function OtaFees({ props }: { props: Props }) {
                 <CircleInfo className="size-3 cursor-help" />
               </Tooltip.Trigger>
               <Tooltip.Content className="max-w-xs">
-                A direct booking did not come through a channel, yet the source carries an “OTA fee” on it.
-                Counted as is and kept under review (DQ-11) until the finance director says what it is.
+                On a direct booking the “OTA fee” of the source tops up the advertising budget of our own sales
+                channel. It is deducted from the owner balance like an OTA fee, and the payment arrives net of it.
               </Tooltip.Content>
             </Tooltip>
           }
@@ -129,84 +135,142 @@ function EstimateChip({ gaps }: { gaps: OwnerBalanceGap[] }) {
   );
 }
 
+/** A card whose header switches the under-review part of its totals on and off; off by default. */
+function Block({
+  title,
+  description,
+  fields,
+  props,
+  footer,
+  children,
+}: {
+  title: string;
+  description: string;
+  /** The totals of the block: the switch is there only when records under review move one of them. */
+  fields: MoneyKey[];
+  props: Props;
+  footer: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [shown, setShown] = useState(false);
+  const hasReview = fields.some((f) => props.underReview[f] !== 0);
+  return (
+    <Card className="gap-4">
+      <Card.Header className="flex-row items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <Card.Title>{title}</Card.Title>
+          <Card.Description>{description}</Card.Description>
+        </div>
+        {hasReview && (
+          <Switch size="sm" className="shrink-0" isSelected={shown} onChange={setShown}>
+            <Switch.Content className="text-xs text-muted">
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+              Under review
+            </Switch.Content>
+          </Switch>
+        )}
+      </Card.Header>
+      <ReviewShown value={shown}>
+        <Card.Content className="gap-3">{children}</Card.Content>
+      </ReviewShown>
+      {footer}
+    </Card>
+  );
+}
+
 export function KpiBlocks(props: Props) {
   const { headline, byStatus, cancellations } = props;
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <Card className="gap-4">
-        <Card.Header className="gap-1">
-          <Card.Title>Accruals</Card.Title>
-          <Card.Description>By nights of stay in the period</Card.Description>
-        </Card.Header>
-        <Card.Content className="gap-3">
-          <Hero label="Gross bookings" field="gross" props={props} />
-          <div className="flex flex-col divide-y divide-separator">
-            <Metric label="Refunds" field="refund" props={props} />
-            <OtaFees props={props} />
-            <Metric label="Net rental" field="netRental" props={props} strong />
-            <Metric label="Management fees" field="managementFee" props={props} />
-            <Metric label="Operating expenses" field="operatingExpenses" props={props} />
-            <Metric
-              label="Owner balance"
-              field="ownerBalance"
-              props={props}
-              strong
-              extra={<EstimateChip gaps={props.ownerBalanceGaps} />}
-            />
-          </div>
-        </Card.Content>
-        <Card.Footer className="mt-auto text-xs text-muted">
-          {count(headline.nights)} nights · expenses paid + pending by expense date ·{" "}
-          {cancellations.count > 0
-            ? `${count(cancellations.count)} cancellations (${idrCompact(cancellations.gross)}) not in revenue`
-            : "no cancellations"}
-        </Card.Footer>
-      </Card>
+      <Block
+        title="Accruals"
+        description="By nights of stay in the period"
+        fields={[
+          "gross",
+          "refund",
+          "otaFee",
+          "otaFeeOta",
+          "otaFeeDirect",
+          "netRental",
+          "managementFee",
+          "operatingExpenses",
+          "ownerBalance",
+        ]}
+        props={props}
+        footer={
+          <Card.Footer className="mt-auto text-xs text-muted">
+            {count(headline.nights)} nights · expenses paid + pending by expense date ·{" "}
+            {cancellations.count > 0
+              ? `${count(cancellations.count)} cancellations (${idrCompact(cancellations.gross)}) not in revenue`
+              : "no cancellations"}
+          </Card.Footer>
+        }
+      >
+        <Hero label="Gross bookings" field="gross" props={props} />
+        <div className="flex flex-col divide-y divide-separator">
+          <Metric label="Refunds" field="refund" props={props} />
+          <OtaFees props={props} />
+          <Metric label="Net rental" field="netRental" props={props} strong />
+          <Metric label="Management fees" field="managementFee" props={props} />
+          <Metric label="Operating expenses" field="operatingExpenses" props={props} />
+          <Metric
+            label="Owner balance"
+            field="ownerBalance"
+            props={props}
+            strong
+            extra={<EstimateChip gaps={props.ownerBalanceGaps} />}
+          />
+        </div>
+      </Block>
 
-      <Card className="gap-4">
-        <Card.Header className="gap-1">
-          <Card.Title>Cash</Card.Title>
-          <Card.Description>By payment date and expense date</Card.Description>
-        </Card.Header>
-        <Card.Content className="gap-3">
-          <Hero label="Cash received" field="received" props={props} />
-          <div className="flex flex-col divide-y divide-separator">
-            <Metric label="Paid expenses" field="paidExpenses" props={props} />
-            <Metric label="Net cash flow" field="netCashFlow" props={props} strong />
-          </div>
-        </Card.Content>
-        <Card.Footer className="mt-auto text-xs text-muted">
-          Payments arrive net of the OTA fee · pending expenses are not cash yet
-        </Card.Footer>
-      </Card>
+      <Block
+        title="Cash"
+        description="By payment date and expense date"
+        fields={["received", "paidExpenses", "netCashFlow"]}
+        props={props}
+        footer={
+          <Card.Footer className="mt-auto text-xs text-muted">
+            Payments arrive net of the OTA fee · pending expenses are not cash yet
+          </Card.Footer>
+        }
+      >
+        <Hero label="Cash received" field="received" props={props} />
+        <div className="flex flex-col divide-y divide-separator">
+          <Metric label="Paid expenses" field="paidExpenses" props={props} />
+          <Metric label="Net cash flow" field="netCashFlow" props={props} strong />
+        </div>
+      </Block>
 
-      <Card className="gap-4">
-        <Card.Header className="gap-1">
-          <Card.Title>Reconciliation</Card.Title>
-          <Card.Description>Reservations checking out in the period, payments of any date</Card.Description>
-        </Card.Header>
-        <Card.Content className="gap-3">
-          <Hero label="Difference (received − expected)" field="difference" props={props} />
-          <div className="flex flex-col divide-y divide-separator">
-            <Metric label="Expected payout" field="expected" props={props} />
-            <Metric label="Received" field="reconciledReceived" props={props} />
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {RECONCILIATION_ORDER.filter((s) => byStatus[s] > 0).map((s) => (
-              <Chip key={s} size="sm" variant="soft" color={RECONCILIATION_META[s].color}>
-                {RECONCILIATION_META[s].label} {count(byStatus[s])}
-              </Chip>
-            ))}
-          </div>
-        </Card.Content>
-        <Card.Footer className="mt-auto flex items-center justify-between gap-2 text-xs text-muted">
-          <span>Due at check-in: the villa is paid in full before arrival</span>
-          <Link href={props.reconciliationHref} className="shrink-0 text-sm">
-            Details
-            <Link.Icon />
-          </Link>
-        </Card.Footer>
-      </Card>
+      <Block
+        title="Reconciliation"
+        description="Reservations checking out in the period, payments of any date"
+        fields={["difference", "expected", "reconciledReceived"]}
+        props={props}
+        footer={
+          <Card.Footer className="mt-auto flex items-center justify-between gap-2 text-xs text-muted">
+            <span>Due at check-in: the villa is paid in full before arrival</span>
+            <Link href={props.reconciliationHref} className="shrink-0 text-sm">
+              Details
+              <Link.Icon />
+            </Link>
+          </Card.Footer>
+        }
+      >
+        <Hero label="Difference (received − expected)" field="difference" props={props} />
+        <div className="flex flex-col divide-y divide-separator">
+          <Metric label="Expected payout" field="expected" props={props} />
+          <Metric label="Received" field="reconciledReceived" props={props} />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {RECONCILIATION_ORDER.filter((s) => byStatus[s] > 0).map((s) => (
+            <Chip key={s} size="sm" variant="soft" color={RECONCILIATION_META[s].color}>
+              {RECONCILIATION_META[s].label} {count(byStatus[s])}
+            </Chip>
+          ))}
+        </div>
+      </Block>
     </div>
   );
 }

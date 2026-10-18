@@ -35,7 +35,7 @@ describe("admit on a run", () => {
       commission_rule: [COMMISSION_RULE],
       reservation: [
         RESERVATION,
-        { ...RESERVATION, reservation_id: "R0002", check_in: "2026-09-20", check_out: "2026-09-22", channel: "Direct" }, // DQ-11 review
+        { ...RESERVATION, reservation_id: "R0002", check_in: "2026-09-20", check_out: "2026-09-22", channel: "Direct" }, // DQ-16 review: unpaid by check-in
         { ...RESERVATION, reservation_id: "R0003", property_id: "V999", check_in: "2026-09-25", check_out: "2026-09-27" }, // DQ-04 excluded
       ],
       payment: [PAYMENT],

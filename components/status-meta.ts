@@ -52,6 +52,5 @@ export const OWNER_BALANCE_GAP_LABEL: Record<OwnerBalanceGap, string> = {
   taxes: "Taxes: PB1 on stays, VAT on management fees",
   ota_fee_bearer: "Who bears the OTA fee (assumed: the owner)",
   mf_base_on_refunds: "Management fee base when there are refunds",
-  direct_ota_fee_meaning: "What “OTA fee” means on direct bookings",
   fx_rates: "Exchange rates",
 };

@@ -63,29 +63,34 @@ export function headlineOf(s: Summary): Headline {
 }
 
 /** a − b, field by field: the part of a total that records under review bring. */
-export function headlineDiff(a: Headline, b: Headline): Headline {
+export function headlineDiff<T extends { readonly [K in keyof T]: number | Money }>(a: T, b: T): T {
   const out: Record<string, number | Money> = {};
-  for (const key of Object.keys(a) as (keyof Headline)[]) {
+  for (const key of Object.keys(a) as (keyof T & string)[]) {
     const [x, y] = [a[key], b[key]];
     out[key] = typeof x === "number" ? x - (y as number) : sub(x, y as Money);
   }
-  return out as unknown as Headline;
+  return out as unknown as T;
 }
 
-export interface PropertyRow {
-  readonly propertyId: string;
-  readonly name: string | null;
-  readonly cluster: string | null;
+/** The figures of a property row, in the order of the table. */
+export interface PropertyFigures {
   readonly nights: number;
   readonly gross: Money;
-  /** Part of the gross of records under review: with them − without them, whatever the switch. */
-  readonly grossUnderReview: Money;
   readonly otaFee: Money;
   readonly managementFee: Money;
   readonly operatingExpenses: Money;
   readonly ownerBalance: Money;
   readonly received: Money;
   readonly difference: Money;
+}
+
+/** Clean records only, whatever the switch: the part under review is kept apart, never added in. */
+export interface PropertyRow extends PropertyFigures {
+  readonly propertyId: string;
+  readonly name: string | null;
+  readonly cluster: string | null;
+  /** Part of each figure that records under review bring: with them − without them. */
+  readonly underReview: PropertyFigures;
   /** Source rows of the villa under review or waiting for a decision, the whole data set. */
   readonly flags: number;
 }
@@ -112,7 +117,7 @@ export interface Dashboard {
   readonly cancellations: Overview["portfolio"]["accruals"]["cancellations"];
   readonly ownerBalanceGaps: readonly OwnerBalanceGap[];
   readonly properties: readonly PropertyRow[];
-  /** The portfolio in the shape of a property row, computed from the rows, not by adding up villas. */
+  /** The portfolio in the shape of a property row, computed from the rows, not by adding up villas; clean records only. */
   readonly totals: Omit<PropertyRow, "propertyId" | "name" | "cluster">;
   readonly outside: { readonly groups: readonly OutsideGroup[]; readonly records: readonly RecordInfo[] };
   readonly failures: { readonly calc: readonly CalcFailure[]; readonly data: readonly DataFailure[] };
@@ -170,28 +175,29 @@ export function dashboardOf(snapshot: Snapshot, filters: Filters): Dashboard {
       flags.set(r.propertyId, (flags.get(r.propertyId) ?? 0) + 1);
     }
   }
-  const grossWithout = new Map(withoutReview.properties.map((p) => [p.propertyId, p.accruals.gross]));
-  const grossWith = new Map(withReview.properties.map((p) => [p.propertyId, p.accruals.gross]));
-  const underReviewGross = (id: string) => sub(grossWith.get(id)!, grossWithout.get(id)!);
+  const withByProperty = new Map(withReview.properties.map((p) => [p.propertyId, p]));
 
-  const rowOf = (s: Summary, grossUnderReview: Money, flagCount: number) => ({
+  const figuresOf = (s: Summary): PropertyFigures => ({
     nights: s.accruals.nights,
     gross: s.accruals.gross,
-    grossUnderReview,
     otaFee: s.accruals.otaFee,
     managementFee: s.accruals.managementFee,
     operatingExpenses: s.accruals.operatingExpenses,
     ownerBalance: s.ownerBalance.amount,
     received: s.cashFlow.received,
     difference: s.reconciliation.difference,
-    flags: flagCount,
   });
+  const rowOf = (clean: Summary, all: Summary, flagCount: number) => {
+    const figures = figuresOf(clean);
+    return { ...figures, underReview: headlineDiff(figuresOf(all), figures), flags: flagCount };
+  };
 
-  const properties: PropertyRow[] = overview.properties.map((p) => ({
+  // Both runs list the same villas: the calculator picks them before it drops records under review.
+  const properties: PropertyRow[] = withoutReview.properties.map((p) => ({
     propertyId: p.propertyId,
     name: info.get(p.propertyId)?.name ?? null,
     cluster: info.get(p.propertyId)?.cluster ?? null,
-    ...rowOf(p, underReviewGross(p.propertyId), flags.get(p.propertyId) ?? 0),
+    ...rowOf(p, withByProperty.get(p.propertyId)!, flags.get(p.propertyId) ?? 0),
   }));
 
   const headline = headlineOf(overview.portfolio);
@@ -208,8 +214,8 @@ export function dashboardOf(snapshot: Snapshot, filters: Filters): Dashboard {
     ownerBalanceGaps: overview.portfolio.ownerBalance.missing,
     properties,
     totals: rowOf(
-      overview.portfolio,
-      underReview.gross,
+      withoutReview.portfolio,
+      withReview.portfolio,
       properties.reduce((n, p) => n + p.flags, 0),
     ),
     outside: outsideOf(snapshot, filters),

@@ -20,3 +20,12 @@
 .recharts-tooltip-cursor {
   fill: var(--color-foreground);
 }
+
+/* HeroUI tooltips break words anywhere (`break-all`); wrap at spaces, and inside a word only if it does not fit.
+   In the components layer, after HeroUI's rule: the same rule outside a layer did not reach the build. */
+@layer components {
+  .tooltip {
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+}

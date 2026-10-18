@@ -44,14 +44,14 @@ describe("calculateAccruals", () => {
     });
   });
 
-  it("OTA fees split by the booking's channel: R0018 via OTA, R0020 direct (DQ-11)", () => {
+  it("OTA fees split by the booking's channel: R0018 via OTA, R0020 direct (marketing fee, DQ-11)", () => {
     const a = calculateAccruals(calcs(RES.R0018, RES.R0020), [], scope({ period: SEPTEMBER }));
     expect(a.otaFeeByChannel).toEqual({ OTA: idr(1124226n), Direct: idr(612470n) });
     expect(a.otaFee).toEqual(idr(1124226n + 612470n));
   });
 
   it("includeReview=false drops review records; property filter", () => {
-    const all = calcs(RES.R0020, RES.R0067, RES.R0018);
+    const all = calcs(RES.R0143, RES.R0067, RES.R0018);
     expect(calculateAccruals(all, [], scope({ includeReview: false })).gross).toEqual(idr(7924759n + 7494830n));
     expect(calculateAccruals(all, [], scope({ propertyIds: new Set(["V013"]) })).gross).toEqual(idr(7494830n));
   });

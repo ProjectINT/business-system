@@ -1,6 +1,7 @@
 // Invariants of the dashboard under any filter (PLAN.md 11.3; ROADMAP.md phase 4): the property rows
 // add up to the portfolio, which the calculator computes from the rows on its own; adjacent periods
-// add up to their union; the switch splits a total into clean and under review.
+// add up to their union; the switch splits a total into clean and under review. The rows hold
+// clean records and, apart, the part under review.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { addDays, nightsBetween, type Money } from "../calc";
@@ -16,7 +17,6 @@ const ids = snapshot.properties.map((p) => p.propertyId);
 
 const MONEY_FIELDS = [
   "gross",
-  "grossUnderReview",
   "otaFee",
   "managementFee",
   "operatingExpenses",
@@ -49,7 +49,9 @@ function dashboardFor(f: FilterValue): Dashboard {
   return dashboardOf(snapshot, filters);
 }
 
-const total = (rows: readonly Dashboard["properties"][number][], key: (typeof MONEY_FIELDS)[number]) =>
+type Figures = Pick<Dashboard["properties"][number], (typeof MONEY_FIELDS)[number]>;
+
+const total = (rows: readonly Figures[], key: (typeof MONEY_FIELDS)[number]) =>
   rows.reduce((s, r) => s + r[key].amount, 0n);
 
 describe("invariants under random filters", () => {
@@ -57,10 +59,19 @@ describe("invariants under random filters", () => {
     fc.assert(
       fc.property(filterArb, (f) => {
         const d = dashboardFor(f);
-        for (const key of MONEY_FIELDS) expect(total(d.properties, key), key).toBe(d.totals[key].amount);
+        const parts = d.properties.map((p) => p.underReview);
+        for (const key of MONEY_FIELDS) {
+          expect(total(d.properties, key), key).toBe(d.totals[key].amount);
+          expect(total(parts, key), key).toBe(d.totals.underReview[key].amount);
+        }
         expect(d.properties.reduce((n, p) => n + p.nights, 0)).toBe(d.totals.nights);
-        expect(d.totals.gross).toEqual(d.headline.gross);
-        expect(d.totals.received).toEqual(d.headline.received);
+        expect(parts.reduce((n, p) => n + p.nights, 0)).toBe(d.totals.underReview.nights);
+        // the rows hold clean records only; the headline adds the part under review when the switch is on
+        const inHeadline = (key: "gross" | "received") =>
+          d.totals[key].amount + (d.filters.includeReview ? d.totals.underReview[key].amount : 0n);
+        expect(inHeadline("gross")).toBe(d.headline.gross.amount);
+        expect(inHeadline("received")).toBe(d.headline.received.amount);
+        expect(d.totals.underReview.gross).toEqual(d.underReview.gross);
       }),
       { numRuns: 60 },
     );

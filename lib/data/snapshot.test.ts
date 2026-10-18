@@ -52,9 +52,9 @@ describe("buildSnapshot", () => {
     });
     expect(byKey.get("R0002")).toMatchObject({
       status: "review",
-      ruleIds: ["DQ-11", "DQ-16"], // direct booking with an OTA fee; no payment by check-in
+      ruleIds: ["DQ-16"], // no payment by check-in; DQ-11 (marketing fee) is information and sets no status
       failed: [
-        { ruleId: "DQ-11", action: "review" },
+        { ruleId: "DQ-11", action: "info" },
         { ruleId: "DQ-16", action: "review" },
       ],
     });

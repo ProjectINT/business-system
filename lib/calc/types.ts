@@ -96,7 +96,7 @@ export interface Accruals {
   readonly gross: Money;
   readonly refund: Money;
   readonly otaFee: Money;
-  /** otaFee split by the booking's channel; Direct with a fee is DQ-11 (review). */
+  /** otaFee split by the booking's channel; on Direct it is the marketing fee (DQ-11, info). */
   readonly otaFeeByChannel: Readonly<Record<Channel, Money>>;
   readonly netRental: Money;
   readonly managementFee: Money;

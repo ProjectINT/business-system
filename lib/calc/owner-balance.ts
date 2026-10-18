@@ -8,7 +8,6 @@ export const OWNER_BALANCE_GAPS = [
   "taxes",
   "ota_fee_bearer",
   "mf_base_on_refunds",
-  "direct_ota_fee_meaning",
   "fx_rates",
 ] as const;
 

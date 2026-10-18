@@ -54,8 +54,8 @@ export const EXPENSE_ROWS = {
   E0072: "E0072,V011,2026-10-19,Maintenance,238459,IDR,pending",
 } as const;
 
-/** DQ statuses as the validation module assigns them (DQ-08, DQ-11, DQ-13). */
-const DQ: Record<string, DqStatus> = { R0020: "review", R0110: "review", R0143: "review", R0102: "review" };
+/** DQ statuses as the validation module assigns them (DQ-08, DQ-13); DQ-11 is information only. */
+const DQ: Record<string, DqStatus> = { R0143: "review", R0102: "review" };
 
 function cells(row: string, n: number): string[] {
   const c = row.split(",");

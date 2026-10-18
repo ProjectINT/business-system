@@ -25,6 +25,13 @@ export function idrSignedCompact(value: number | bigint): string {
   return `${negative ? "−" : "+"}IDR ${compact.format(abs)}`;
 }
 
+/** "+1,120,600,000", "−279,000": a change in a table cell, sign first. */
+export function signedFull(value: number | bigint): string {
+  const negative = value < 0;
+  const abs = negative ? -value : value;
+  return `${negative ? "−" : "+"}${full.format(abs)}`;
+}
+
 export function count(value: number | bigint): string {
   return full.format(value);
 }

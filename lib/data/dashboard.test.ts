@@ -23,12 +23,23 @@ const snapshot = await snapshotOf({
 describe("dashboardOf", () => {
   const d = dashboardOf(snapshot, filtersOf(snapshot));
 
-  it("rows per villa with name, cluster, figures and the flag count", () => {
-    expect(d.properties.map((p) => [p.propertyId, p.name, p.cluster, p.nights, p.gross.amount, p.grossUnderReview.amount, p.flags])).toEqual([
-      ["V001", "Villa 01", "Seminyak", 3, 3000000n, 0n, 0],
-      ["V002", "Villa 01", "Ubud", 2, 3000000n, 3000000n, 1],
+  it("rows per villa with name, cluster, clean figures, the part under review and the flag count", () => {
+    const row = (p: (typeof d.properties)[number]) => [
+      p.propertyId,
+      p.name,
+      p.cluster,
+      p.nights,
+      p.gross.amount,
+      p.underReview.nights,
+      p.underReview.gross.amount,
+      p.flags,
+    ];
+    expect(d.properties.map(row)).toEqual([
+      ["V001", "Villa 01", "Seminyak", 3, 3000000n, 0, 0n, 0],
+      ["V002", "Villa 01", "Ubud", 0, 0n, 2, 3000000n, 1],
     ]);
-    expect(d.totals).toMatchObject({ nights: 5, gross: idr(6000000n), grossUnderReview: idr(3000000n), flags: 1 });
+    expect(d.totals).toMatchObject({ nights: 3, gross: idr(3000000n), flags: 1 });
+    expect(d.totals.underReview).toMatchObject({ nights: 2, gross: idr(3000000n) });
     expect(d.headline.operatingExpenses).toEqual(idr(500000n));
   });
 
@@ -36,7 +47,12 @@ describe("dashboardOf", () => {
     const off = dashboardOf(snapshot, filtersOf(snapshot, { review: "off" }));
     expect(off.headline.gross).toEqual(idr(3000000n));
     expect(off.underReview).toEqual(d.underReview);
-    expect(off.properties.find((p) => p.propertyId === "V002")?.gross).toEqual(idr(0n));
+  });
+
+  it("the rows do not follow the switch: clean figures and the part under review either way", () => {
+    const off = dashboardOf(snapshot, filtersOf(snapshot, { review: "off" }));
+    expect(off.properties).toEqual(d.properties);
+    expect(off.totals).toEqual(d.totals);
   });
 
   it("a villa missing from the property list keeps its row with blanks", () => {

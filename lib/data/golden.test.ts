@@ -169,29 +169,29 @@ describe("golden: records under review left out (review=off)", () => {
 
   it("only clean records remain: DQ-16, DQ-23 and the cases put most of the data under review", () => {
     expect(amounts(d.headline)).toEqual({
-      nights: 50,
-      gross: 113643282n,
+      nights: 59,
+      gross: 136099743n,
       refund: 0n,
-      otaFee: 15971833n,
+      otaFee: 18939287n,
       otaFeeOta: 15971833n,
-      otaFeeDirect: 0n, // every direct booking with a fee is under review (DQ-11)
-      netRental: 97671449n,
-      managementFee: 19750951n,
+      otaFeeDirect: 2967454n, // marketing fee of R0035 and R0100: DQ-11 is information, nothing else flags them
+      netRental: 117160456n,
+      managementFee: 23969565n,
       operatingExpenses: 33830975n,
-      ownerBalance: 44089523n,
+      ownerBalance: 59359916n,
       received: 24450887n,
       paidExpenses: 25448397n,
       netCashFlow: -997510n,
-      expected: 97671449n,
+      expected: 117160456n,
       reconciledReceived: 24450887n,
-      difference: -73220562n,
+      difference: -92709569n,
     });
   });
 
   it("the part under review is the difference between the two runs, whatever the switch", () => {
     const on = dashboardOf(snapshot, filtersOf(snapshot));
     expect(d.underReview).toEqual(on.underReview);
-    expect(on.underReview.gross.amount).toBe(1256651523n - 113643282n);
+    expect(on.underReview.gross.amount).toBe(1256651523n - 136099743n);
     expect(amounts(on.underReview)).toEqual(
       Object.fromEntries(
         Object.entries(amounts(headlineOf(on.overview.portfolio))).map(([k, v]) => [

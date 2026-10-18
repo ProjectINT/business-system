@@ -26,9 +26,22 @@ describe("resolveCommissionRule", () => {
     expect(resolveCommissionRule([open], "V011", date("2099-01-01"))).toBe(open);
   });
 
-  it("two rules on one date → AMBIGUOUS_COMMISSION_RULE", () => {
-    const second = { ...v011, effectiveFrom: date("2026-10-01"), rate: parseRate("0.2") };
-    expectCode(() => resolveCommissionRule([v011, second], "V011", date("2026-10-05")), "AMBIGUOUS_COMMISSION_RULE");
+  it("overlapping periods: the rule with the later effective_from wins (DQ-22 is a flag)", () => {
+    // 0.17 from 01.09 and 0.20 from 01.11, both until 31.12
+    const later = { ...v011, effectiveFrom: date("2026-11-01"), rate: parseRate("0.2") };
+    expect(resolveCommissionRule([v011, later], "V011", date("2026-10-15"))).toBe(v011);
+    expect(resolveCommissionRule([v011, later], "V011", date("2026-11-15"))).toBe(later);
+    expect(resolveCommissionRule([later, v011], "V011", date("2026-11-15"))).toBe(later);
+  });
+
+  it("two rules with the same effective_from → AMBIGUOUS_COMMISSION_RULE", () => {
+    const twin = { ...v011, rate: parseRate("0.2") };
+    expectCode(() => resolveCommissionRule([v011, twin], "V011", date("2026-10-05")), "AMBIGUOUS_COMMISSION_RULE");
+  });
+
+  it("same effective_from twice but only one still in force is not ambiguous", () => {
+    const expired = { ...v011, effectiveTo: date("2026-09-30"), rate: parseRate("0.2") };
+    expect(resolveCommissionRule([v011, expired], "V011", date("2026-10-05"))).toBe(v011);
   });
 
   it("rate change inside a stay: the check-in date decides", () => {

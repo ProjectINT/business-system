@@ -212,7 +212,7 @@ class CalcError extends Error {
 | `EMPTY_ALLOCATION` | распределение на 0 частей | — |
 | `INVALID_WEIGHTS` | отрицательный вес или сумма весов 0 | `[-1, 2]`, `[0, 0]` |
 | `NO_COMMISSION_RULE` | на дату заезда нет ставки | заезд 2027-01-05 |
-| `AMBIGUOUS_COMMISSION_RULE` | на дату больше одной ставки | в режиме CSV, где нет `EXCLUDE` базы (DQ-22) |
+| `AMBIGUOUS_COMMISSION_RULE` | на дату больше одной ставки с одной и той же датой начала | только в режиме CSV: в базе ключ правила — вилла и дата начала. Пересечение правил с разными датами начала — не ошибка, действует позднее (DQ-22 помечает) |
 | `UNSUPPORTED_FEE_BASIS` | неизвестная база комиссии | `fee_basis = net_revenue` |
 | `UNKNOWN_STATUS` | неизвестный статус брони или расхода | `pending` у брони |
 | `RECORD_NOT_ADMITTED` | на вход пришла запись `excluded` или `duplicate` | ошибка вызывающего кода |
@@ -248,7 +248,7 @@ class CalcError extends Error {
 
 | Функция | Результат | Формула |
 |---|---|---|
-| `resolveCommissionRule(rules, propertyId, date)` | правило | `effective_from ≤ date ≤ effective_to` (null — без срока); 0 правил → `NO_COMMISSION_RULE`, больше одного → `AMBIGUOUS_COMMISSION_RULE`. Дата — `check_in` |
+| `resolveCommissionRule(rules, propertyId, date)` | правило | `effective_from ≤ date ≤ effective_to` (null — без срока); 0 правил → `NO_COMMISSION_RULE`; несколько → действует правило с самой поздней `effective_from` (PLAN.md, журнал 2026-10-18); несколько с одной и той же самой поздней `effective_from` → `AMBIGUOUS_COMMISSION_RULE`. Дата — `check_in` |
 | `calculateManagementFee(r, rule, mode)` | `MF_r` | `switch (feeBasis)`: `gross_booking_value` → `roundDiv(GBV × num, den)` |
 | `calculateNetRental(r)` | чистая выручка аренды | `GBV − REF − OTA` |
 | `calculateExpectedPayout(r)` | ожидаемое поступление | `GBV − OTA − REF` (OTA удерживает комиссию, PLAN.md, 7.4) |
@@ -358,7 +358,7 @@ interface CalcPolicies {
 export const DEFAULT_POLICIES: CalcPolicies = Object.freeze({ ... });
 ```
 
-- Тип и значения по умолчанию лежат в `lib/calc/policies.ts`, поэтому модуль самодостаточен. Ставка комиссии всегда берётся на дату заезда. Это решение из журнала PLAN.md, а не политика: смену ставки внутри проживания ловит DQ-17.
+- Тип и значения по умолчанию лежат в `lib/calc/policies.ts`, поэтому модуль самодостаточен. Ставка комиссии всегда берётся на дату заезда; если на эту дату действует несколько правил виллы, побеждает правило с более поздней `effective_from`. Оба — решения из журнала PLAN.md (2026-10-18), а не политика: смену ставки внутри проживания ловит DQ-17, пересечение правил — DQ-22.
 - Переключатель `includeReview` — фильтр интерфейса, он передаётся в `Scope`.
 - У каждого значения политики есть тест, который показывает, какие цифры она меняет.
 
@@ -536,7 +536,7 @@ lib/calc/
 - дата = `effective_from` (2026-09-01) → 0.17; дата = `effective_to` (2026-12-31, граница входит) → 0.17;
 - 2026-08-31 и 2027-01-01 → `NO_COMMISSION_RULE`;
 - правило другого объекта не используется; `effective_to = null` действует без срока;
-- два пересекающихся правила → `AMBIGUOUS_COMMISSION_RULE`;
+- два пересекающихся правила с разными датами начала (0.17 с 01.09, 0.20 с 01.11, оба до 31.12): заезд 15.10 даёт 0.17, заезд 15.11 — 0.20, порядок правил на входе не важен; два правила с одной датой начала → `AMBIGUOUS_COMMISSION_RULE`; правило с той же датой начала, но уже истёкшее, неоднозначности не создаёт;
 - ставка меняется внутри проживания (0.17 до 30.09, 0.20 с 01.10; бронь 28.09–04.10) → 0.17 по дате заезда.
 
 **`calculateReservation`:**

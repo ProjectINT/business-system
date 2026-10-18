@@ -1,4 +1,8 @@
 -- Ставки комиссии управляющей компании по объектам. Ставка для брони берётся по дате заезда (PLAN.md, 7.2).
+-- Ключ — вилла и дата начала: правило с той же датой начала обновляет старое как новую версию.
+-- Пересечение периодов правил одной виллы не запрещено (решено 2026-10-18): правила приходят отдельными
+-- файлами, и новое обычно приходит без укороченного старого. Пересечение помечает DQ-22 (review), а в расчёте
+-- на спорных датах действует правило с более поздней effective_from (resolveCommissionRule, CALCULATION_MODULE.md).
 -- Происхождение и история версий — как в app.property.
 create table app.commission_rule (
   property_id text not null references app.property,
@@ -7,7 +11,7 @@ create table app.commission_rule (
   management_fee_rate numeric(6, 4) not null,  -- доля: 0.17 = 17%
   fee_basis text not null,
   note text,
-  -- effective_to входит в период, поэтому '[]'
+  -- effective_to входит в период, поэтому '[]'; по period идёт запрос DQ-22
   period daterange generated always as (daterange(effective_from, effective_to, '[]')) stored,
   raw_record_id bigint not null references app.raw_record,
   row_hash text not null,
@@ -15,9 +19,7 @@ create table app.commission_rule (
   constraint commission_rule_period_ordered check (effective_to >= effective_from),
   constraint commission_rule_rate_bounds check (management_fee_rate >= 0 and management_fee_rate < 1),
   -- другую базу расчётный движок не умеет; новая база — осознанное изменение схемы и движка
-  constraint commission_rule_fee_basis_known check (fee_basis in ('gross_booking_value')),
-  -- у объекта на любую дату не больше одной ставки (DQ-22). Ошибка 23P01.
-  constraint commission_rule_no_overlap exclude using gist (property_id with =, period with &&)
+  constraint commission_rule_fee_basis_known check (fee_basis in ('gross_booking_value'))
 );
 
 alter table app.commission_rule enable row level security;

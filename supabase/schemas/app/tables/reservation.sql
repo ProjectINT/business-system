@@ -15,7 +15,8 @@ create table app.reservation (
   refund_amount numeric(18, 2) not null,
   channel text not null,
   updated_at date not null,  -- дата изменения в источнике, не время записи в базу
-  -- для modified: исходная бронь. В источнике связи нет (DQ-13), её задаёт решение link_origin
+  -- для modified: исходная бронь. В источнике связи нет (DQ-13); её выбирает человек при разборе случая
+  -- (review_decision.payload.origin, VALIDATION_PLAN.md, 7.5)
   origin_reservation_id text references app.reservation,
   -- '[)': ночь заезда входит, день выезда нет
   stay daterange generated always as (daterange(check_in, check_out, '[)')) stored,

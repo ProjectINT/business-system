@@ -7,7 +7,7 @@ export default defineConfig({
     setupFiles: ["lib/calc/testing/setup.ts"],
     coverage: {
       provider: "v8",
-      include: ["lib/calc/**/*.ts", "lib/ingest/**/*.ts"],
+      include: ["lib/calc/**/*.ts", "lib/ingest/**/*.ts", "lib/dq/**/*.ts"],
       exclude: [
         "lib/calc/**/*.test.ts",
         "lib/calc/testing/**",
@@ -16,6 +16,10 @@ export default defineConfig({
         "lib/ingest/**/*.test.ts",
         "lib/ingest/index.ts",
         "lib/ingest/types.ts",
+        "lib/dq/**/*.test.ts",
+        "lib/dq/testing/**",
+        "lib/dq/index.ts",
+        "lib/dq/types.ts",
       ],
       thresholds: { 100: true },
     },

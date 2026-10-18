@@ -24,6 +24,9 @@ export interface Headline {
   readonly gross: Money;
   readonly refund: Money;
   readonly otaFee: Money;
+  // otaFee by the booking's channel: otaFeeOta + otaFeeDirect = otaFee
+  readonly otaFeeOta: Money;
+  readonly otaFeeDirect: Money;
   readonly netRental: Money;
   readonly managementFee: Money;
   readonly operatingExpenses: Money;
@@ -44,6 +47,8 @@ export function headlineOf(s: Summary): Headline {
     gross: s.accruals.gross,
     refund: s.accruals.refund,
     otaFee: s.accruals.otaFee,
+    otaFeeOta: s.accruals.otaFeeByChannel.OTA,
+    otaFeeDirect: s.accruals.otaFeeByChannel.Direct,
     netRental: s.accruals.netRental,
     managementFee: s.accruals.managementFee,
     operatingExpenses: s.accruals.operatingExpenses,

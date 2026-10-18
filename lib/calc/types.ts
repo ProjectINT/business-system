@@ -10,6 +10,7 @@ export type DqStatus = "clean" | "review";
 export type ReservationStatus = "confirmed" | "modified" | "cancelled";
 export type FeeBasis = "gross_booking_value";
 export type ExpenseStatus = "paid" | "pending";
+export type Channel = "OTA" | "Direct";
 
 export interface ReservationInput {
   readonly reservationId: string;
@@ -20,7 +21,7 @@ export interface ReservationInput {
   readonly gross: Money; // gross_booking_value
   readonly otaFee: Money; // sign is not restricted: R0102 = −100 000 (DQ-08, review)
   readonly refund: Money;
-  readonly channel: "OTA" | "Direct";
+  readonly channel: Channel;
   readonly dqStatus: DqStatus;
 }
 
@@ -64,6 +65,7 @@ export interface ReservationCalc {
   readonly propertyId: string;
   readonly checkIn: CalendarDate;
   readonly checkOut: CalendarDate;
+  readonly channel: Channel;
   readonly dqStatus: DqStatus;
   readonly nights: number;
   readonly active: boolean; // confirmed | modified
@@ -94,6 +96,8 @@ export interface Accruals {
   readonly gross: Money;
   readonly refund: Money;
   readonly otaFee: Money;
+  /** otaFee split by the booking's channel; Direct with a fee is DQ-11 (review). */
+  readonly otaFeeByChannel: Readonly<Record<Channel, Money>>;
   readonly netRental: Money;
   readonly managementFee: Money;
   readonly operatingExpenses: Money; // paid + pending, by expense_date

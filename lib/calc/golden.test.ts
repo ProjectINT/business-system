@@ -29,6 +29,7 @@ describe("golden: V011, September 2026", () => {
       gross: idr(26791884n),
       refund: idr(0n),
       otaFee: idr(3603816n),
+      otaFeeByChannel: { OTA: idr(1994230n), Direct: idr(1609586n) }, // R0143 + R0067; R0020 + R0110
       netRental: idr(23188068n),
       managementFee: idr(4554620n),
       operatingExpenses: idr(1103588n),

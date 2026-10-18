@@ -37,24 +37,60 @@ function Metric({
   field,
   props,
   strong,
+  nested,
   extra,
 }: {
   label: React.ReactNode;
   field: MoneyKey;
   props: Props;
   strong?: boolean;
+  /** A part of the row above: smaller and muted, so the parts do not read as more totals. */
+  nested?: boolean;
   extra?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 py-1.5">
-      <span className={`flex items-center gap-2 text-sm ${strong ? "font-medium" : "text-muted"}`}>
+    <div className={`flex items-start justify-between gap-3 ${nested ? "py-1" : "py-1.5"}`}>
+      <span
+        className={`flex items-center gap-2 ${nested ? "text-xs" : "text-sm"} ${strong ? "font-medium" : "text-muted"}`}
+      >
         {label}
         {extra}
       </span>
       <span className="flex flex-col items-end leading-tight">
-        <span className={`tabular-nums ${strong ? "font-semibold" : ""}`}>{idrFull(props.headline[field])}</span>
+        <span className={`tabular-nums ${strong ? "font-semibold" : ""} ${nested ? "text-sm text-muted" : ""}`}>
+          {idrFull(props.headline[field])}
+        </span>
         <UnderReview value={props.underReview[field]} includeReview={props.includeReview} />
       </span>
+    </div>
+  );
+}
+
+/** OTA fees split by the booking's channel; the two parts add up to the row above. */
+function OtaFees({ props }: { props: Props }) {
+  return (
+    <div className="pb-1.5">
+      <Metric label="OTA fees" field="otaFee" props={props} />
+      <div className="ms-1 flex flex-col border-s border-separator ps-3">
+        <Metric label="OTA bookings" field="otaFeeOta" props={props} nested />
+        <Metric
+          label="Direct bookings"
+          field="otaFeeDirect"
+          props={props}
+          nested
+          extra={
+            <Tooltip delay={150}>
+              <Tooltip.Trigger aria-label="About the fee on direct bookings">
+                <CircleInfo className="size-3 cursor-help" />
+              </Tooltip.Trigger>
+              <Tooltip.Content className="max-w-xs">
+                A direct booking did not come through a channel, yet the source carries an “OTA fee” on it.
+                Counted as is and kept under review (DQ-11) until the finance director says what it is.
+              </Tooltip.Content>
+            </Tooltip>
+          }
+        />
+      </div>
     </div>
   );
 }
@@ -106,7 +142,7 @@ export function KpiBlocks(props: Props) {
           <Hero label="Gross bookings" field="gross" props={props} />
           <div className="flex flex-col divide-y divide-separator">
             <Metric label="Refunds" field="refund" props={props} />
-            <Metric label="OTA fees" field="otaFee" props={props} />
+            <OtaFees props={props} />
             <Metric label="Net rental" field="netRental" props={props} strong />
             <Metric label="Management fees" field="managementFee" props={props} />
             <Metric label="Operating expenses" field="operatingExpenses" props={props} />

@@ -36,11 +36,18 @@ describe("calculateAccruals", () => {
       gross: idr(0n),
       refund: idr(0n),
       otaFee: idr(0n),
+      otaFeeByChannel: { OTA: idr(0n), Direct: idr(0n) },
       netRental: idr(0n),
       managementFee: idr(0n),
       operatingExpenses: idr(0n),
       cancellations: { count: 0, gross: idr(0n), refund: idr(0n), retained: idr(0n) },
     });
+  });
+
+  it("OTA fees split by the booking's channel: R0018 via OTA, R0020 direct (DQ-11)", () => {
+    const a = calculateAccruals(calcs(RES.R0018, RES.R0020), [], scope({ period: SEPTEMBER }));
+    expect(a.otaFeeByChannel).toEqual({ OTA: idr(1124226n), Direct: idr(612470n) });
+    expect(a.otaFee).toEqual(idr(1124226n + 612470n));
   });
 
   it("includeReview=false drops review records; property filter", () => {

@@ -1,7 +1,7 @@
 // Golden figures of the whole sample (CALCULATION_MODULE.md 11.6): the portfolio for September,
 // October and the whole period, fixed in numbers. They depend on the DQ statuses, so a change in a
 // rule or in the calculator shows up here as a diff. Cross-checked once by an independent pass over
-// the raw CSV (plain BigInt, no lib/ code): nights, GBV, OTA, MF, expenses, owner balance, cash — equal to the rupiah.
+// the raw CSV (plain BigInt, no lib/ code): nights, GBV, OTA (and its split by channel), MF, expenses, owner balance, cash — equal to the rupiah.
 import { describe, expect, it } from "vitest";
 import type { Money } from "../calc";
 import { dashboardOf, headlineOf, type Headline } from "./dashboard";
@@ -61,6 +61,8 @@ describe("golden: V011, September 2026 — the same numbers as lib/calc/golden.t
       gross: 26791884n,
       refund: 0n,
       otaFee: 3603816n,
+      otaFeeOta: 1994230n,
+      otaFeeDirect: 1609586n,
       netRental: 23188068n,
       managementFee: 4554620n,
       operatingExpenses: 1103588n,
@@ -95,6 +97,8 @@ describe("golden: the portfolio, records under review included", () => {
       gross: 1256651523n,
       refund: 0n,
       otaFee: 183008072n,
+      otaFeeOta: 143965529n,
+      otaFeeDirect: 39042543n,
       netRental: 1073643451n,
       managementFee: 223293180n,
       operatingExpenses: 49462041n,
@@ -119,6 +123,8 @@ describe("golden: the portfolio, records under review included", () => {
       gross: 716599606n,
       refund: 0n,
       otaFee: 105451267n,
+      otaFeeOta: 80170599n,
+      otaFeeDirect: 25280668n,
       netRental: 611148339n,
       managementFee: 127113711n,
       operatingExpenses: 22546329n,
@@ -140,6 +146,8 @@ describe("golden: the portfolio, records under review included", () => {
       gross: 540051917n,
       refund: 0n,
       otaFee: 77556805n,
+      otaFeeOta: 63794930n,
+      otaFeeDirect: 13761875n,
       netRental: 462495112n,
       managementFee: 96179469n,
       operatingExpenses: 26915712n,
@@ -165,6 +173,8 @@ describe("golden: records under review left out (review=off)", () => {
       gross: 113643282n,
       refund: 0n,
       otaFee: 15971833n,
+      otaFeeOta: 15971833n,
+      otaFeeDirect: 0n, // every direct booking with a fee is under review (DQ-11)
       netRental: 97671449n,
       managementFee: 19750951n,
       operatingExpenses: 33830975n,

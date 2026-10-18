@@ -13,6 +13,7 @@ export function calculateAccruals(
   const z = zero(scope.baseCurrency);
   let nights = 0;
   let [gross, refund, otaFee, managementFee, operatingExpenses] = [z, z, z, z, z];
+  const otaFeeByChannel = { OTA: z, Direct: z };
   const cancellations = { count: 0, gross: z, refund: z, retained: z };
 
   for (const c of calcs) {
@@ -23,6 +24,7 @@ export function calculateAccruals(
       gross = add(gross, line.gross);
       refund = add(refund, line.refund);
       otaFee = add(otaFee, line.otaFee);
+      otaFeeByChannel[c.channel] = add(otaFeeByChannel[c.channel], line.otaFee);
       managementFee = add(managementFee, line.managementFee);
     }
     if (c.cancelled && inPeriod(scope.period, c.checkIn)) {
@@ -44,6 +46,7 @@ export function calculateAccruals(
     gross,
     refund,
     otaFee,
+    otaFeeByChannel,
     netRental: sub(sub(gross, refund), otaFee),
     managementFee,
     operatingExpenses,

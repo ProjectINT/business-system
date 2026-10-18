@@ -93,6 +93,7 @@ export function calculateReservation(
     propertyId: r.propertyId,
     checkIn: r.checkIn,
     checkOut: r.checkOut,
+    channel: r.channel,
     dqStatus: r.dqStatus,
     nights,
   };

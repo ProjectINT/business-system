@@ -20,6 +20,10 @@ function addAccruals(a: Accruals, b: Accruals): Accruals {
     gross: add(a.gross, b.gross),
     refund: add(a.refund, b.refund),
     otaFee: add(a.otaFee, b.otaFee),
+    otaFeeByChannel: {
+      OTA: add(a.otaFeeByChannel.OTA, b.otaFeeByChannel.OTA),
+      Direct: add(a.otaFeeByChannel.Direct, b.otaFeeByChannel.Direct),
+    },
     netRental: add(a.netRental, b.netRental),
     managementFee: add(a.managementFee, b.managementFee),
     operatingExpenses: add(a.operatingExpenses, b.operatingExpenses),
@@ -64,6 +68,8 @@ describe("aggregate invariants", () => {
         const right = compute(input, s(p.mid + 1, p.to));
         expect(addAccruals(left.accruals, right.accruals)).toEqual(whole.accruals);
         expect(addCash(left.cash, right.cash)).toEqual(whole.cash);
+        const { OTA, Direct } = whole.accruals.otaFeeByChannel;
+        expect(add(OTA, Direct)).toEqual(whole.accruals.otaFee);
       }),
       runs,
     );

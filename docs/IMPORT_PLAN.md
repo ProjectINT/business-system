@@ -1,6 +1,20 @@
 # План загрузки данных
 
-Статус: черновик v2 от 2026-10-18 (v1 проверен, изменения — в разделе 17). Детализирует импорт из PLAN.md (раздел 9) и встраивает в него модуль проверки (VALIDATION_PLAN.md). Если документы расходятся, для загрузки действует этот, расхождения — в разделе 15.
+Статус: черновик v2.1 от 2026-10-18 (v1 проверен, изменения — в разделе 17; v2.1 — шаг разбора человеком перед публикацией, раздел 8). **Отложен до сдачи уровня 1; для сдачи — урезанный объём из раздела 0.** Детализирует импорт из PLAN.md (раздел 9) и встраивает в него модуль проверки (VALIDATION_PLAN.md). Если документы расходятся, для загрузки действует этот, расхождения — в разделе 15.
+
+## 0. Объём для сдачи (решено 2026-10-18)
+
+Задание просит объяснить повторный импорт без дублей, аудит и разграничение доступа, а не построить фоновый конвейер. Полный план ниже остаётся целевой архитектурой для README (раздел 4 задания); для сдачи делается урезанная версия (PLAN.md, этап 10), после того как уровень 1 готов.
+
+Остаётся:
+- `import_batch` + `import_file` с sha256; повтор тех же пяти файлов даёт `skipped`;
+- `raw_record` только дописывание, вставка по `(file_id, line_no)` без дублей; `row_hash` по полям нашего формата;
+- `app.stage_file` на SQL (раздел 7) с `try_date` / `try_numeric`;
+- раннер проверок с журналом в Postgres (`dq_run`, `dq_check_result`, `dq_record_verdict`), публикация одной транзакцией с `record_version` и `occupancy` (VALIDATION_PLAN.md, 5);
+- шлюз разбора (раздел 8): пачка со случаями останавливается в `needs_review`, кнопка **Publish batch** после разбора синхронно запускает второй запуск и публикацию. Без экрана разбора (PLAN.md, этап 12) наша пачка не опубликуется: в данных 35 случаев. Поэтому этап 12 идёт сразу за импортом;
+- запуск синхронно в одном процессе: `npm run import` (CLI по CSV из репозитория) и кнопка **Load sample data** на `/imports` через server function; страница `/imports` читает `import_batch`, `import_file`, `dq_run.summary` вместо мока.
+
+Откладывается: загрузка файлов из браузера и Storage (раздел 3), очередь `import_job` и обработчик с `after()` (раздел 4), pg_net / pg_cron / Vault (4.2), сопоставление колонок и DeepSeek (раздел 5; только точное совпадение с нашим форматом, зашитое в `targets.ts`), опрос прогресса и `import_event` (разделы 9–10). Каждый из этих кусков добавляется поверх урезанной версии без переделки: таблицы и шаги те же, меняется только то, кто и когда их вызывает.
 
 ## 1. Требования
 
@@ -12,6 +26,7 @@
 6. Каждый шаг пишет событие в журнал загрузки. По журналу видно, что, когда и почему произошло, включая ответ модели.
 7. Любой шаг можно повторить без дублей: повтор куска не создаёт лишних строк, повтор `stage` перезаписывает staging, повтор всей пачки с теми же файлами даёт `skipped`.
 8. Цепочка шагов описана в одном месте на TypeScript (`lib/import/pipeline.ts`) и покрыта тестами. База отвечает за гарантии: аренду задачи, единственность незавершённой задачи, пробуждение обработчика.
+9. **Публикация ждёт человека.** Если проверки нашли случаи `decide` (пересечения, modified-брони, разные версии одной записи), пачка останавливается в `needs_review` и не публикует ничего, пока человек не решит каждый случай и не нажмёт **Publish batch** (VALIDATION_PLAN.md, 7.5).
 
 ## 2. Поток данных
 
@@ -28,12 +43,14 @@ flowchart LR
   RAW --> RR[("raw_record")]
   RR --> STG["3. stage<br/>SQL: raw → stg_*"]
   STG --> VAL["4. validate<br/>раннер DQ"]
-  VAL --> PUB["5. publish<br/>основные таблицы"]
+  VAL -->|"есть pending"| REV["5. review<br/>человек решает случаи<br/>пачка needs_review"]
+  REV -->|"Publish batch:<br/>запуск с решениями"| VAL
+  VAL -->|"нет pending"| PUB["6. publish<br/>основные таблицы"]
   W --> EV[("import_event<br/>журнал")]
   UI -->|"опрос раз в 1 с"| P["GET /api/imports/[batchId]/progress"]
 ```
 
-Этапы 1–3 идут по каждому файлу отдельно и могут идти параллельно (несколько вызовов обработчика берут разные задачи), этапы 4–5 — по пачке, когда все её файлы прошли этап 3.
+Этапы 1–3 идут по каждому файлу отдельно и могут идти параллельно (несколько вызовов обработчика берут разные задачи), этапы 4–6 — по пачке, когда все её файлы прошли этап 3. Этап 5 есть только у пачки со случаями разбора.
 
 ## 3. Загрузка файла
 
@@ -57,8 +74,8 @@ Bucket `imports` приватный: читает и выдаёт signed URL т�
 |---|---|
 | `job_id` | ключ |
 | `batch_id`, `file_id` | пачка; файл — для этапов 1–3, `null` для 4–5 |
-| `kind` | `map_columns`, `load_raw`, `stage`, `validate`, `publish` |
-| `status` | `queued`, `running`, `waiting_user`, `done`, `failed` |
+| `kind` | `map_columns`, `load_raw`, `stage`, `validate`, `review`, `publish` |
+| `status` | `queued`, `running`, `waiting_user`, `done`, `failed`; `review` всегда `waiting_user`, её закрывает Publish batch, а не обработчик |
 | `cursor` | jsonb: докуда дошли, например `{"line_no": 1501}` |
 | `progress_done`, `progress_total` | для полосы прогресса |
 | `attempts`, `max_attempts` | неудачные попытки; по умолчанию 3 |
@@ -217,9 +234,12 @@ Route handler Next.js `POST /api/import/worker`, `runtime = 'nodejs'`, `maxDurat
 
 ## 8. Проверка и публикация
 
-- **`validate`** вызывает раннер из VALIDATION_PLAN.md (раздел 5, шаги 1–4): создаёт `dq_run`, выполняет правила, пишет `dq_check_result`, `dq_record_verdict`, `dq_issue`. Раннер получает `onProgress(done, total)` — число выполненных правил из общего (небольшое дополнение к контракту раннера).
-- **`publish`** — шаг 5 раннера: одна транзакция с `set local app.run_id` и `app.actor = 'import:ui'` (`set local` внутри транзакции работает и через transaction pooler, сессионный `set` — нет), основные таблицы, `occupancy`, история через `record_version`.
+- **`validate`** вызывает раннер из VALIDATION_PLAN.md (раздел 5, шаги 1–5): создаёт `dq_run`, выполняет правила с действующими решениями на входе, пишет `dq_check_result`, `dq_record_verdict`, `dq_issue`. Раннер получает `onProgress(done, total)` — число выполненных правил из общего (небольшое дополнение к контракту раннера). Нет строк `pending` — ставится `publish`. Есть — ставится `review`.
+- **`review`** — шаг человека. Задача сразу получает `waiting_user`, обработчик её не берёт; пачка — `needs_review`; прогресс задачи — решённые случаи из всех (`app.review_case`). Человек решает случаи на `/review`: server action `resolveCase` пишет решения одной транзакцией и обновляет прогресс, основные таблицы и календарь не меняются (VALIDATION_PLAN.md, 7.5). Когда решены все, `publishBatch` в одной транзакции закрывает `review` (`done`) и ставит повторный `validate`. Триггер будит обработчик, запуск с решениями не находит `pending` и ставит `publish`.
+- **`publish`** — шаг 6 раннера: одна транзакция с `set local app.run_id` и `app.actor = 'import:ui'` (`set local` внутри транзакции работает и через transaction pooler, сессионный `set` — нет), основные таблицы, `occupancy`, история через `record_version`. Публикуется только запуск без `pending`: `publish` проверяет это ещё раз.
 - После публикации пачка получает `loaded`, итоговые счётчики пишутся в `dq_run.summary` и показываются на странице журнала. Ошибка публикации — `failed` у задачи и пачки, журнал проверок остаётся.
+- **Новая пачка, пока прежняя ждёт разбора.** Загружать можно. Когда новая пачка доходит до `validate`, прежняя пачка в `needs_review` получает `superseded`, её задача `review` закрывается с событием `batch_superseded`, опубликованной она не станет. Решения не теряются: они привязаны к содержимому строк, а не к пачке, и действуют в новой пачке для тех же строк. `validate`, `review` и `publish` в каждый момент идут не больше чем у одной пачки.
+- **В урезанной версии (раздел 0)** то же без очереди: `npm run import` доходит до шлюза и останавливается в `needs_review`, `publishBatch` выполняет повторный `validate` и `publish` синхронно в server function.
 
 Модуль проверки строится отдельно по своему плану. До его готовности `validate` — заглушка, которая пишет событие «checks not implemented» и сразу ставит `publish`, а `publish` ничего не публикует и переводит пачку в `loaded`. Так загрузка до staging работает и проверяется независимо.
 
@@ -231,9 +251,9 @@ Route handler Next.js `POST /api/import/worker`, `runtime = 'nodejs'`, `maxDurat
 |---|---|
 | `event_id` | ключ |
 | `batch_id`, `file_id`, `job_id` | к чему относится |
-| `stage` | `upload`, `map_columns`, `load_raw`, `stage`, `validate`, `publish`, `worker` |
+| `stage` | `upload`, `map_columns`, `load_raw`, `stage`, `validate`, `review`, `publish`, `worker` |
 | `level` | `info`, `warn`, `error` |
-| `code` | машинный код: `file_registered`, `batch_skipped`, `mapping_exact`, `mapping_cached`, `mapping_proposed`, `mapping_confirmed`, `chunk_written`, `sha_mismatch`, `job_yielded`, `job_retry`, `job_failed` ... |
+| `code` | машинный код: `file_registered`, `batch_skipped`, `mapping_exact`, `mapping_cached`, `mapping_proposed`, `mapping_confirmed`, `chunk_written`, `sha_mismatch`, `job_yielded`, `job_retry`, `job_failed`, `review_required`, `case_resolved`, `publish_requested`, `batch_superseded` ... |
 | `message` | текст для человека |
 | `details` | jsonb: строки куска, `mapping_id`, ошибка со стеком, `attempt` |
 | `at` | время |
@@ -246,8 +266,9 @@ Route handler Next.js `POST /api/import/worker`, `runtime = 'nodejs'`, `maxDurat
 
 1. **Выбор файлов.** Зона перетаскивания, несколько CSV, поле даты среза. По каждому файлу: имя, размер, сущность (определена или выпадающий список), статус загрузки в Storage. Кнопка **Start import** и условия её доступности (раздел 3).
 2. **Сопоставление.** Если у файла задача `waiting_user`: таблица «поле → колонка источника», источник (exact / cache / AI / manual) и уверенность, кнопка **Confirm mapping**.
-3. **Прогресс.** По каждому файлу шаги Uploaded → Columns mapped → Raw rows (полоса `done / total`) → Staged. Ниже — шаги пачки Validation (правила `x / N`) → Publishing → Done. У упавшего шага — ошибка и кнопка **Retry**.
+3. **Прогресс.** По каждому файлу шаги Uploaded → Columns mapped → Raw rows (полоса `done / total`) → Staged. Ниже — шаги пачки Validation (правила `x / N`) → Review (случаи `x / N`, кнопка **Open review** на `/review`) → Publishing → Done. Шаг Review виден только у пачки со случаями. У упавшего шага — ошибка и кнопка **Retry**.
 4. **Лента событий.** Последние `import_event` пачки, новые сверху, ошибки выделены.
+5. **Пока пачка ждёт разбора**, дашборд показывает прошлую публикацию с баннером «пачка от <дата> ждёт разбора: N случаев» и ссылкой на `/review`. До первой публикации дашборд работает на CSV (режим уровня 1) с тем же баннером.
 
 Прогресс приходит опросом `GET /api/imports/[batchId]/progress` раз в секунду, пока пачка не в конечном статусе (`params` в Next.js 16 — промис, ответ с `cache-control: no-store`). Supabase Realtime не используем: схема `app` закрыта от Data API и RLS, открывать её ради подписки незачем, а опрос раз в секунду для одного пользователя ничего не стоит.
 
@@ -257,10 +278,11 @@ Route handler Next.js `POST /api/import/worker`, `runtime = 'nodejs'`, `maxDurat
 
 | Объект | Изменение |
 |---|---|
-| `import_batch.status` | `uploading`, `queued`, `processing`, `loaded`, `skipped`, `failed`; `loading` убрать; ограничение `finished`: `finished_at is null` ровно для первых трёх |
+| `import_batch.status` | `uploading`, `queued`, `processing`, `needs_review`, `loaded`, `skipped`, `superseded`, `failed`; `loading` убрать; ограничение `finished`: `finished_at is null` ровно для первых четырёх |
 | `import_batch.source_kind` | добавить `upload` (файлы из интерфейса); `source_ref` для них — префикс в Storage |
 | `import_file` | `status` (`uploading`, `uploaded`, `mapping`, `mapped`, `loading`, `loaded`, `staged`, `failed`; `waiting_user` — у задачи), `storage_path`, `mapping_id`; `entity`, `file_sha256`, `byte_size`, `header` допускают `null` до регистрации, `row_count` — до конца `load_raw`; ограничения по статусу. `unique (batch_id, entity)` остаётся: `null` не конфликтуют |
-| `app.import_job` | новая, раздел 4.1, с индексом `import_job_one_active` |
+| `app.import_job` | новая, раздел 4.1, с индексом `import_job_one_active`; второй частичный уникальный индекс — не больше одной задачи `validate` / `publish` в `queued` или `running` на всю базу (раздел 8) |
+| разбор | `dq_issue`, `dq_record_verdict`, `review_decision`, представление `app.review_case` — VALIDATION_PLAN.md, 7.5 |
 | `app.import_event` | новая, раздел 9, `forbid_change` |
 | `app.column_mapping` | новая, раздел 5 |
 | функции | `app.stage_file`, `app.try_date`, `app.try_numeric`, `app.wake_import_worker` (`security definer`) и триггерная обёртка |
@@ -304,6 +326,8 @@ app/api/import/worker/route.ts        вход для pg_net: секрет, 202,
 app/api/imports/[batchId]/progress/route.ts
 app/imports/upload/page.tsx
 app/imports/actions.ts                createUpload, registerFile, startBatch, confirmMapping, retryJob, loadSampleData
+app/review/page.tsx                   разбор случаев пачки (VALIDATION_PLAN.md, 7.5)
+app/review/actions.ts                 resolveCase, publishBatch, exportCasesCsv
 components/imports/upload/            выбор файлов, сопоставление, прогресс, лента
 scripts/import-worker.ts              локальный цикл для разработки
 ```
@@ -325,6 +349,7 @@ scripts/import-worker.ts              локальный цикл для раз�
 9. **Staging:** `stage` дважды даёт те же строки; после замены сопоставления файла повторный `stage` перестраивает `stg_*`.
 10. **Сквозной:** пять файлов из `Technical_Challenge_Data` → staging; число строк `stg_*` = `import_file.row_count` = строк в файле.
 11. **Файл с чужими колонками:** копия `reservations.csv` с переименованными колонками (`check-in`, `Gross Value`) проходит через модель (подменённую) и подтверждение и даёт тот же staging и те же `row_hash`, что оригинал.
+12. **Шлюз разбора:** пять файлов из `Technical_Challenge_Data` останавливаются в `needs_review` с задачей `review` (35 случаев), основные таблицы пусты; `publishBatch` до решения всех случаев отклоняется; после решений — повторный `validate`, `publish`, пачка `loaded`. Новая пачка во время разбора переводит прежнюю в `superseded`, решения по неизменным строкам переходят в новую.
 
 ## 14. Этапы
 
@@ -339,7 +364,7 @@ scripts/import-worker.ts              локальный цикл для раз�
 | 5 | Прогресс и лента событий в интерфейсе; журнал `/imports` на реальных данных; Load sample data | 50 мин | |
 | 6 | `pg_cron` + `pg_net` + Vault, проверка на Vercel | 30 мин | |
 | 7 | DeepSeek: кэш, запрос, проверка ответа, экран подтверждения (необязательный, можно отложить) | 60 мин | |
-| 8 | Подключение `validate` / `publish` к модулю проверки | по VALIDATION_PLAN.md | |
+| 8 | Подключение `validate` / `publish` к модулю проверки; шаг `review`: статусы `needs_review` / `superseded`, `publishBatch`, повторный `validate`, индекс одной пачки на шлюзе | по VALIDATION_PLAN.md + 30 мин | |
 | | **Итого без этапа 8** | **≈ 5 ч 35 мин** | |
 
 Этапы 1–4 дают сквозной путь «файл → Storage → задача → raw → staging» на наших данных, с него удобно начинать. Этапы 6 и 7 можно отложить или не делать: без 6 очередь крутит локальный процесс, без 7 чужие заголовки сопоставляются руками.
@@ -353,6 +378,7 @@ scripts/import-worker.ts              локальный цикл для раз�
 - **`raw_record.payload`** хранит исходные имена колонок, а не поля нашего формата. Сопоставление — отдельный версионируемый объект (`column_mapping`). `row_hash` при этом считается по полям нашего формата.
 - **Статусы `import_batch`** расширены (раздел 11), `loading` заменён на `uploading` / `queued` / `processing`.
 - **Раннер проверок** получает `onProgress` (дополнение к VALIDATION_PLAN.md, раздел 3).
+- **Публикация ждёт человека:** в PLAN.md (9) импорт сразу публикует пачку. Теперь пачка со случаями `decide` останавливается в `needs_review`, публикует её повторный запуск после Publish batch (раздел 8).
 
 ## 16. Открытые вопросы
 

@@ -352,6 +352,7 @@ interface CalcPolicies {
   revenueRecognition: 'nights' | 'checkout';      // по умолчанию 'nights'
   rounding: RoundingMode;                         // 'half-up'
   reconciliationDate: 'check_out' | 'last_night'; // 'check_out' — как в PLAN.md, 7.1; см. вопрос 3
+  paymentDue: 'check_in' | 'check_out';           // 'check_in' — оплата 100% до заезда (PLAN.md, журнал 2026-10-18); в коде пока нет
 }
 
 export const DEFAULT_POLICIES: CalcPolicies = Object.freeze({ ... });
@@ -671,6 +672,7 @@ Stryker с vitest-runner на `lib/calc`, цель — не меньше 95% у�
 - `vitest.config.mts` (а не `.ts`): проект — CommonJS, vite предупреждает о ESM-конфиге. `@types/node` поднят до `^24` (требование vitest 5, рантайм — Node 24).
 - Фикстуры — дословные строки CSV, их совпадение с `Technical_Challenge_Data` проверяет `testing/fixtures.test.ts`.
 - Не сделано: подключение дашборда к расчётам (этап 5 — нужен загрузчик и DQ-статусы), эталон по всему набору (11.6), Stryker.
+- Не сделано: политика `paymentDue` (решение 2026-10-18, оплата до заезда). Сейчас `not_due` в сверке проверяет `check_out > asOf`; должно быть `check_in > asOf`. Менять вместе с DQ-16.
 
 ## 14. Открытые вопросы
 

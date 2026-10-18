@@ -9,9 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@gravity-ui/icons": "^2.22.0",
+    "@heroui/react": "^3.2.6",
+    "@heroui/styles": "^3.2.6",
     "next": "16.4.2",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
@@ -20,6 +24,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "supabase": "^2.121.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

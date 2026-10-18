@@ -7,6 +7,6 @@
     "noFallthroughCasesInSwitch": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": ["lib/calc/**/*.ts", "lib/ingest/**/*.ts", "lib/dq/**/*.ts"],
+  "include": ["lib/calc/**/*.ts", "lib/ingest/**/*.ts", "lib/dq/**/*.ts", "lib/data/**/*.ts"],
   "exclude": ["node_modules"]
 }

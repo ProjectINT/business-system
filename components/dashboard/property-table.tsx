@@ -1,63 +1,53 @@
 "use client";
 
-import { Chip, SearchField, Table, type SortDescriptor } from "@heroui/react";
+import { Chip, SearchField, Table, Tooltip, type SortDescriptor } from "@heroui/react";
 import { useMemo, useState } from "react";
-import type { PropertyAggregate } from "@/lib/mock/dashboard";
+import type { View } from "@/lib/calc";
+import type { Dashboard, PropertyRow } from "@/lib/data";
 import { count, idrFull } from "@/lib/format";
 
-type NumericKey = Exclude<keyof PropertyAggregate, "id" | "name" | "cluster">;
+type Row = View<PropertyRow>;
+type NumericKey = "nights" | "gross" | "otaFee" | "managementFee" | "operatingExpenses" | "ownerBalance" | "received" | "difference";
 
-const COLUMNS: { id: NumericKey; label: string }[] = [
-  { id: "nights", label: "Nights" },
-  { id: "gross", label: "Gross bookings" },
-  { id: "ota", label: "OTA fees" },
-  { id: "mgmt", label: "Mgmt fees" },
-  { id: "expenses", label: "Expenses" },
-  { id: "ownerBalance", label: "Owner balance*" },
-  { id: "received", label: "Cash received" },
+const COLUMNS: { id: NumericKey; label: string; hint: string }[] = [
+  { id: "nights", label: "Nights", hint: "Nights of stay in the period; overlapping stays count twice" },
+  { id: "gross", label: "Gross bookings", hint: "By nights of stay in the period" },
+  { id: "otaFee", label: "OTA fees", hint: "By nights of stay" },
+  { id: "managementFee", label: "Mgmt fees", hint: "Rate on check-in date × gross, by nights" },
+  { id: "operatingExpenses", label: "Expenses", hint: "Paid + pending, by expense date" },
+  { id: "ownerBalance", label: "Owner balance*", hint: "Net rental − management fees − expenses; an estimate" },
+  { id: "received", label: "Cash received", hint: "By payment date" },
+  { id: "difference", label: "Recon. difference", hint: "Received − expected, reservations checking out in the period" },
 ];
 
-export function PropertyTable({ rows }: { rows: PropertyAggregate[] }) {
+export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dashboard["totals"]> }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortDescriptor>({ column: "gross", direction: "descending" });
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = q
-      ? rows.filter((r) => `${r.id} ${r.name} ${r.cluster}`.toLowerCase().includes(q))
+      ? rows.filter((r) => `${r.propertyId} ${r.name ?? ""} ${r.cluster ?? ""}`.toLowerCase().includes(q))
       : rows;
-    const key = sort.column as keyof PropertyAggregate;
+    const key = sort.column as keyof Row;
     const dir = sort.direction === "descending" ? -1 : 1;
     return [...filtered].sort((a, b) => {
       const x = a[key];
       const y = b[key];
-      return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y))) * dir;
+      return (typeof x === "number" && typeof y === "number" ? x - y : String(x ?? "").localeCompare(String(y ?? ""))) * dir;
     });
   }, [rows, query, sort]);
-
-  const totals = useMemo(
-    () =>
-      Object.fromEntries(
-        COLUMNS.map((c) => [c.id, visible.reduce((sum, r) => sum + r[c.id], 0)]),
-      ) as Record<NumericKey, number>,
-    [visible],
-  );
 
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold">By property</h2>
+          <h2 className="text-lg font-semibold">By villa</h2>
           <Chip size="sm" variant="soft">
             {visible.length}
           </Chip>
         </div>
-        <SearchField
-          aria-label="Search properties"
-          className="w-64"
-          value={query}
-          onChange={setQuery}
-        >
+        <SearchField aria-label="Search villas" className="w-64" value={query} onChange={setQuery}>
           <SearchField.Group>
             <SearchField.SearchIcon />
             <SearchField.Input placeholder="Search villa or cluster…" />
@@ -69,30 +59,26 @@ export function PropertyTable({ rows }: { rows: PropertyAggregate[] }) {
       <Table>
         <Table.ScrollContainer>
           <Table.Content
-            aria-label="Aggregated metrics by property"
-            className="min-w-[1080px]"
+            aria-label="Figures by villa"
+            className="min-w-[1180px]"
             sortDescriptor={sort}
             onSortChange={setSort}
           >
             <Table.Header>
-              <Table.Column allowsSorting isRowHeader id="id">
+              <Table.Column allowsSorting isRowHeader id="propertyId">
                 {({ sortDirection }) => (
-                  <Table.SortableColumnHeader sortDirection={sortDirection}>
-                    Property
-                  </Table.SortableColumnHeader>
+                  <Table.SortableColumnHeader sortDirection={sortDirection}>Villa</Table.SortableColumnHeader>
                 )}
               </Table.Column>
               <Table.Column allowsSorting id="cluster">
                 {({ sortDirection }) => (
-                  <Table.SortableColumnHeader sortDirection={sortDirection}>
-                    Cluster
-                  </Table.SortableColumnHeader>
+                  <Table.SortableColumnHeader sortDirection={sortDirection}>Cluster</Table.SortableColumnHeader>
                 )}
               </Table.Column>
               {COLUMNS.map((c) => (
                 <Table.Column key={c.id} allowsSorting id={c.id} className="text-end">
                   {({ sortDirection }) => (
-                    <Table.SortableColumnHeader sortDirection={sortDirection} className="justify-end">
+                    <Table.SortableColumnHeader sortDirection={sortDirection} className="justify-end" title={c.hint}>
                       {c.label}
                     </Table.SortableColumnHeader>
                   )}
@@ -100,7 +86,11 @@ export function PropertyTable({ rows }: { rows: PropertyAggregate[] }) {
               ))}
               <Table.Column allowsSorting id="flags" className="text-end">
                 {({ sortDirection }) => (
-                  <Table.SortableColumnHeader sortDirection={sortDirection} className="justify-end">
+                  <Table.SortableColumnHeader
+                    sortDirection={sortDirection}
+                    className="justify-end"
+                    title="Source rows of the villa under review or awaiting a decision, whole data set"
+                  >
                     DQ flags
                   </Table.SortableColumnHeader>
                 )}
@@ -108,28 +98,38 @@ export function PropertyTable({ rows }: { rows: PropertyAggregate[] }) {
             </Table.Header>
             <Table.Body
               renderEmptyState={() => (
-                <div className="py-8 text-center text-sm text-muted">No properties match “{query}”</div>
+                <div className="py-8 text-center text-sm text-muted">
+                  {rows.length === 0 ? "No villas in this selection" : `No villas match “${query}”`}
+                </div>
               )}
             >
               {visible.map((r) => (
-                <Table.Row key={r.id} id={r.id}>
+                <Table.Row key={r.propertyId} id={r.propertyId}>
                   <Table.Cell>
                     <div className="flex flex-col leading-tight">
-                      <span className="font-medium">{r.name}</span>
-                      <span className="text-xs text-muted">{r.id}</span>
+                      <span className="font-medium">{r.name ?? r.propertyId}</span>
+                      <span className="text-xs text-muted">{r.propertyId}</span>
                     </div>
                   </Table.Cell>
-                  <Table.Cell className="text-muted">{r.cluster}</Table.Cell>
+                  <Table.Cell className="text-muted">{r.cluster ?? "—"}</Table.Cell>
                   {COLUMNS.map((c) => (
                     <Table.Cell key={c.id} className="text-end tabular-nums">
                       {c.id === "nights" ? count(r[c.id]) : idrFull(r[c.id])}
+                      {c.id === "gross" && r.grossUnderReview !== 0 && (
+                        <span className="block text-xs text-warning">{idrFull(r.grossUnderReview)} in question</span>
+                      )}
                     </Table.Cell>
                   ))}
                   <Table.Cell className="text-end">
                     {r.flags > 0 ? (
-                      <Chip size="sm" variant="soft" color={r.flags >= 10 ? "danger" : "warning"}>
-                        {r.flags}
-                      </Chip>
+                      <Tooltip delay={200}>
+                        <Tooltip.Trigger>
+                          <Chip size="sm" variant="soft" color="warning" className="cursor-help">
+                            {r.flags}
+                          </Chip>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content>Rows under review or awaiting a decision</Tooltip.Content>
+                      </Tooltip>
                     ) : (
                       <span className="text-muted">—</span>
                     )}
@@ -141,11 +141,13 @@ export function PropertyTable({ rows }: { rows: PropertyAggregate[] }) {
         </Table.ScrollContainer>
         <Table.Footer className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="text-muted">
-            * Estimate: no owner payouts, opening balances or taxes in the source data.
+            * Estimate: no owner payouts, opening balances or taxes in the source data. Totals are for the whole
+            selection, computed from the rows.
           </span>
           <span className="tabular-nums">
-            Total gross <span className="font-medium">{idrFull(totals.gross)}</span> · owner balance{" "}
-            <span className="font-medium">{idrFull(totals.ownerBalance)}</span>
+            Gross <span className="font-medium">{idrFull(totals.gross)}</span> · owner balance{" "}
+            <span className="font-medium">{idrFull(totals.ownerBalance)}</span> · received{" "}
+            <span className="font-medium">{idrFull(totals.received)}</span>
           </span>
         </Table.Footer>
       </Table>

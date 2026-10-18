@@ -9,13 +9,15 @@ export type View<T> = T extends Money
     ? string
     : T extends bigint
       ? never
-      : T extends ReadonlySet<infer U>
-        ? View<U>[]
-        : T extends readonly (infer U)[]
+      : T extends string | number | boolean | null | undefined
+        ? T // a branded CalendarDate stays a string, not an object
+        : T extends ReadonlySet<infer U>
           ? View<U>[]
-          : T extends object
-            ? { -readonly [K in keyof T]: View<T[K]> }
-            : T;
+          : T extends readonly (infer U)[]
+            ? View<U>[]
+            : T extends object
+              ? { -readonly [K in keyof T]: View<T[K]> }
+              : T;
 
 function isMoney(v: object): v is Money {
   return "amount" in v && typeof v.amount === "bigint" && "currency" in v;

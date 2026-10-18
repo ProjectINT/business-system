@@ -17,7 +17,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/", label: "Dashboard", icon: House, match: ["/raw-data"] },
   { href: "/imports", label: "Import logs", icon: ClockArrowRotateLeft, match: ["/imports"] },
-  { href: "/reconciliation", label: "Reconciliation", icon: ScalesUnbalanced, match: [], soon: true },
+  { href: "/reconciliation", label: "Reconciliation", icon: ScalesUnbalanced, match: ["/reconciliation"] },
   { href: "/data-quality", label: "Data quality", icon: ShieldCheck, match: [], soon: true },
 ];
 

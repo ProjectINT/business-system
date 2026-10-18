@@ -1,20 +1,75 @@
-import { AccruedVsReceivedChart } from "@/components/dashboard/accrued-vs-received-chart";
+import { Suspense } from "react";
 import { DataQualityCard } from "@/components/dashboard/data-quality-card";
-import { KpiCards } from "@/components/dashboard/kpi-cards";
+import { FilterBar } from "@/components/dashboard/filter-bar";
+import { GbvChart } from "@/components/dashboard/gbv-chart";
+import { KpiBlocks } from "@/components/dashboard/kpi-blocks";
+import { Notices } from "@/components/dashboard/notices";
+import { noticesOf } from "@/components/dashboard/notices-of";
+import { OutsideFigures } from "@/components/dashboard/outside-figures";
+import { PageSkeleton } from "@/components/dashboard/page-skeleton";
 import { PropertyTable } from "@/components/dashboard/property-table";
-import { ACCRUED_VS_RECEIVED, KPIS, PROPERTY_AGGREGATES } from "@/lib/mock/dashboard";
+import { toView } from "@/lib/calc";
+import { dashboardOf, dataSource, filterOptionsOf, parseFilters, searchOf } from "@/lib/data";
 
-export default function OverviewPage() {
+// Filters come from the URL, so the figures render per request behind a Suspense boundary;
+// loading and the checks run once per process (lib/data/csv-source.ts).
+export default function OverviewPage({ searchParams }: PageProps<"/">) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <Overview searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function Overview({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
+  const snapshot = await dataSource().snapshot();
+  const { filters, warnings } = parseFilters(await searchParams, snapshot);
+  const d = dashboardOf(snapshot, filters);
+  const query = searchOf(filters, snapshot.range);
+  const state = {
+    from: filters.from,
+    to: filters.to,
+    propertyIds: filters.propertyIds,
+    cluster: filters.cluster,
+    includeReview: filters.includeReview,
+  };
+
+  const withReview = filters.includeReview;
+  const gbv = d.properties.map((p) => {
+    const gross = toView(p.gross);
+    const underReview = toView(p.grossUnderReview);
+    return { id: p.propertyId, name: p.name, clean: withReview ? gross - underReview : gross, underReview };
+  });
+
   return (
     <>
-      <KpiCards items={KPIS} />
+      <FilterBar state={state} options={filterOptionsOf(snapshot)} />
+      <Notices items={noticesOf(snapshot, warnings, d.failures)} />
+      <KpiBlocks
+        headline={toView(d.headline)}
+        underReview={toView(d.underReview)}
+        includeReview={filters.includeReview}
+        byStatus={d.byStatus}
+        cancellations={toView(d.cancellations)}
+        ownerBalanceGaps={[...d.ownerBalanceGaps]}
+        reconciliationHref={`/reconciliation${query}`}
+      />
+      <OutsideFigures
+        groups={toView(d.outside.groups)}
+        keys={d.outside.records.map((r) => r.recordKey ?? r.unitId)}
+      />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          <AccruedVsReceivedChart data={ACCRUED_VS_RECEIVED} />
+          <GbvChart data={gbv} includeReview={filters.includeReview} />
         </div>
-        <DataQualityCard />
+        <DataQualityCard
+          counts={snapshot.report.summary.counts}
+          files={Object.keys(snapshot.dataset.files).length}
+          runStatus={snapshot.report.status}
+          sourceLabel={snapshot.source.label}
+        />
       </div>
-      <PropertyTable rows={PROPERTY_AGGREGATES} />
+      <PropertyTable rows={toView(d.properties)} totals={toView(d.totals)} />
     </>
   );
 }

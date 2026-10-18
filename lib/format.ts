@@ -17,6 +17,13 @@ export function idrFull(value: number | bigint): string {
   return full.format(value);
 }
 
+/** "+IDR 1.1B", "−IDR 279M": a change, sign first. */
+export function idrSignedCompact(value: number | bigint): string {
+  const negative = value < 0;
+  const abs = negative ? -value : value;
+  return `${negative ? "−" : "+"}IDR ${compact.format(abs)}`;
+}
+
 export function count(value: number | bigint): string {
   return full.format(value);
 }

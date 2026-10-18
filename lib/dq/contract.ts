@@ -2,10 +2,22 @@
 // area, no result outside it, a reason on every `skip`, the unit's own record key. The runner
 // applies this check after each rule; the contract test applies the same function to each rule
 // of the registry, so "a row without a verdict is impossible by construction" holds in both.
-import type { AnyUnit, CheckResult } from "./types";
+import type { AnyUnit, Check, CheckResult, Entity, Unit } from "./types";
 
 /** Outcomes a rule may return. `error` is the runner's: a rule that failed or broke the contract. */
 const RULE_OUTCOMES: ReadonlySet<string> = new Set(["pass", "fail", "skip"]);
+
+/** Entities of a rule's area, in the order declared. */
+export function entitiesOf(check: Pick<Check, "entity">): readonly Entity[] {
+  return Array.isArray(check.entity) ? check.entity : [check.entity as Entity];
+}
+
+/** Units of a rule's area: the units of each of its entities, in the order declared. */
+export function areaOf(check: Pick<Check, "entity">, units: <E extends Entity>(entity: E) => readonly Unit<E>[]): readonly AnyUnit[] {
+  const entities = entitiesOf(check);
+  if (entities.length === 1) return units(entities[0]!);
+  return entities.flatMap((e) => units(e));
+}
 
 /** Violations of the contract, in the order found; empty when the results cover the area exactly. */
 export function contractViolations(area: readonly AnyUnit[], results: readonly CheckResult[]): string[] {
@@ -32,6 +44,6 @@ export function contractViolations(area: readonly AnyUnit[], results: readonly C
 }
 
 /** Results in journal order: by `unitId`, byte-wise, so two runs on the same data agree. */
-export function sortResults(results: readonly CheckResult[]): CheckResult[] {
+export function sortResults<R extends CheckResult>(results: readonly R[]): R[] {
   return [...results].sort((a, b) => (a.unitId < b.unitId ? -1 : a.unitId > b.unitId ? 1 : 0));
 }

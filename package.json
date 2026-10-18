@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:sync": "supabase db schema declarative sync --no-apply -f",
     "conflicts": "node scripts/reservation-conflicts.mjs",
+    "dq": "tsx scripts/dq.ts",
     "test": "vitest run",
     "typecheck:lib": "tsc -p tsconfig.lib.json --noEmit",
     "test:lib": "vitest run lib --coverage && npm run typecheck:lib",
@@ -36,6 +37,7 @@
     "fast-check": "^4.10.2",
     "supabase": "^2.121.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.5"
   }

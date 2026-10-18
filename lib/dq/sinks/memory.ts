@@ -3,8 +3,7 @@
 import type {
   Action,
   Check,
-  CheckResult,
-  Entity,
+  JournalResult,
   RuleId,
   RunClose,
   RunMeta,
@@ -14,10 +13,10 @@ import type {
   Verdict,
 } from "../types";
 
-export interface StoredResult extends CheckResult {
+export interface StoredResult extends JournalResult {
   readonly ruleId: RuleId;
   readonly ruleVersion: number;
-  readonly entity: Entity;
+  /** The result's own action when it has one, otherwise the rule's (`dq_check_result.action`). */
   readonly action: Action;
 }
 
@@ -40,15 +39,14 @@ export class MemorySink implements Sink {
     return runId;
   }
 
-  async writeResults(runId: string, check: Check, results: readonly CheckResult[]): Promise<void> {
+  async writeResults(runId: string, check: Check, results: readonly JournalResult[]): Promise<void> {
     const run = this.run(runId);
     for (const r of results) {
       run.results.push({
         ...r,
         ruleId: check.id,
         ruleVersion: check.version,
-        entity: check.entity,
-        action: check.action,
+        action: r.action ?? check.action,
       });
     }
   }

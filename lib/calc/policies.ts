@@ -7,18 +7,25 @@ export interface CalcPolicies {
   readonly rounding: RoundingMode;
   /** Which period a reservation is reconciled in: by check-out date or by its last night. */
   readonly reconciliationDate: "check_out" | "last_night";
+  /**
+   * When the payout is due: 'check_in' — the villa is paid in full before check-in (PLAN.md decision
+   * log 2026-10-18), so only a stay that has not started by the as-of date is `not_due`; 'check_out' — by the end of the stay.
+   */
+  readonly paymentDue: "check_in" | "check_out";
 }
 
 export const DEFAULT_POLICIES: CalcPolicies = Object.freeze({
   revenueRecognition: "nights",
   rounding: "half-up",
   reconciliationDate: "check_out",
+  paymentDue: "check_in",
 });
 
 const ALLOWED: { readonly [K in keyof CalcPolicies]: readonly CalcPolicies[K][] } = {
   revenueRecognition: ["nights", "checkout"],
   rounding: ["half-up", "half-even"],
   reconciliationDate: ["check_out", "last_night"],
+  paymentDue: ["check_in", "check_out"],
 };
 
 /** Policies come from the caller, so they are checked at runtime too. */

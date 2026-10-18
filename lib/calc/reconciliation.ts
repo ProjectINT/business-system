@@ -14,11 +14,27 @@ import type {
   Scope,
 } from "./types";
 
-/** Expected payout vs all payments of the reservation, whatever their date. Exact comparison, no tolerance. */
+/** The day the payout is due (policy `paymentDue`): check-in, or check-out. */
+function paymentDueDate(calc: ReservationCalc, policies: CalcPolicies): CalendarDate {
+  switch (policies.paymentDue) {
+    case "check_in":
+      return calc.checkIn;
+    case "check_out":
+      return calc.checkOut;
+    default:
+      return assertNever(policies.paymentDue, "INVALID_POLICY", "paymentDue");
+  }
+}
+
+/**
+ * Expected payout vs all payments of the reservation, whatever their date. Exact comparison, no
+ * tolerance. A shortfall is `not_due` only while the due date (policy) is after the as-of date.
+ */
 export function reconcileReservation(
   calc: ReservationCalc,
   payments: readonly PaymentInput[],
   asOf: CalendarDate,
+  policies: CalcPolicies,
 ): ReconciliationLine {
   const expected = calc.expectedPayout;
   const received = sum(
@@ -26,11 +42,11 @@ export function reconcileReservation(
     expected.currency,
   );
   const cmp = compare(received, expected);
-  const ended = calc.checkOut <= asOf;
+  const due = paymentDueDate(calc, policies) <= asOf;
   let status: ReconciliationStatus;
   if (cmp === 0) status = "matched";
   else if (cmp > 0) status = "overpaid";
-  else if (!ended) status = "not_due";
+  else if (!due) status = "not_due";
   else status = isZero(received) ? "not_received" : "underpaid";
   return {
     reservationId: calc.reservationId,
@@ -73,7 +89,7 @@ export function reconcile(
 
   const lines = calcs
     .filter((c) => inScope(c, scope, c.reservationId) && inPeriod(scope.period, reconciliationDate(c, policies)))
-    .map((c) => reconcileReservation(c, byReservation.get(c.reservationId) ?? [], scope.asOf))
+    .map((c) => reconcileReservation(c, byReservation.get(c.reservationId) ?? [], scope.asOf, policies))
     .sort((a, b) => compareText(a.reservationId, b.reservationId));
 
   const byStatus: Record<ReconciliationStatus, number> = {

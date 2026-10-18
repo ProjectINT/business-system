@@ -20,30 +20,41 @@ const pay = (id: string, reservationId: string, amount: bigint, day = "2026-09-2
 // GBV 1000, no OTA fee → expected 1000; stay 20.09–24.09.
 const x = calc(synthetic({ gross: idr(1000n), otaFee: idr(0n) }));
 const ended = date("2026-10-15");
-const before = date("2026-09-22");
+const before = date("2026-09-19");
+const byDue = (paymentDue: CalcPolicies["paymentDue"]): CalcPolicies => ({ ...DEFAULT_POLICIES, paymentDue });
 
 describe("reconcileReservation", () => {
+  // Payment is due at check-in (PLAN.md 7.4): a shortfall is "not due" only before the stay starts.
   it.each<[string, bigint[], string, string]>([
     ["equal", [1000n], "2026-10-15", "matched"],
     ["several payments", [400n, 600n], "2026-10-15", "matched"],
     ["nothing after the stay", [], "2026-10-15", "not_received"],
     ["part after the stay", [999n], "2026-10-15", "underpaid"],
     ["more than expected", [1001n], "2026-10-15", "overpaid"],
-    ["more than expected before the end", [1001n], "2026-09-22", "overpaid"],
-    ["nothing before the end", [], "2026-09-22", "not_due"],
-    ["check-out day itself counts as ended", [], "2026-09-24", "not_received"],
+    ["more than expected before check-in", [1001n], "2026-09-19", "overpaid"],
+    ["nothing before check-in", [], "2026-09-19", "not_due"],
+    ["check-in day itself is due", [], "2026-09-20", "not_received"],
+    ["part paid during the stay", [999n], "2026-09-22", "underpaid"],
   ])("%s → %s", (_, amounts, asOf, status) => {
     const line = reconcileReservation(
       x,
       amounts.map((a, i) => pay(`P${i}`, "X0001", a)),
       date(asOf),
+      DEFAULT_POLICIES,
     );
     expect(line.status).toBe(status);
     expect(line.difference.amount).toBe(amounts.reduce((a, b) => a + b, 0n) - 1000n);
   });
 
+  it("paymentDue 'check_out': a shortfall during the stay is not due yet; the check-out day is", () => {
+    expect(reconcileReservation(x, [], date("2026-09-22"), byDue("check_out")).status).toBe("not_due");
+    expect(reconcileReservation(x, [], date("2026-09-22"), byDue("check_in")).status).toBe("not_received");
+    expect(reconcileReservation(x, [], date("2026-09-24"), byDue("check_out")).status).toBe("not_received");
+    expectCode(() => reconcileReservation(x, [], ended, byDue("x" as CalcPolicies["paymentDue"])), "INVALID_POLICY");
+  });
+
   it("R0102/P0051 → matched: 3 998 667 = 3 898 667 − (−100 000)", () => {
-    expect(reconcileReservation(calc(RES.R0102), [PAY.P0051], ended)).toMatchObject({
+    expect(reconcileReservation(calc(RES.R0102), [PAY.P0051], ended, DEFAULT_POLICIES)).toMatchObject({
       expected: idr(3998667n),
       received: idr(3998667n),
       difference: idr(0n),
@@ -54,12 +65,12 @@ describe("reconcileReservation", () => {
   it("payments of other reservations do not count; payment date does not matter", () => {
     const other = pay("P1", "R9999", 1000n);
     const late = pay("P2", "X0001", 1000n, "2026-12-01");
-    expect(reconcileReservation(x, [other], ended).status).toBe("not_received");
-    expect(reconcileReservation(x, [late], before).status).toBe("matched");
+    expect(reconcileReservation(x, [other], ended, DEFAULT_POLICIES).status).toBe("not_received");
+    expect(reconcileReservation(x, [late], before, DEFAULT_POLICIES).status).toBe("matched");
   });
 
   it("cancelled reservation expects nothing", () => {
-    expect(reconcileReservation(calc(RES.R0131), [], ended).status).toBe("matched");
+    expect(reconcileReservation(calc(RES.R0131), [], ended, DEFAULT_POLICIES).status).toBe("matched");
   });
 });
 

@@ -6,7 +6,7 @@
 // A `fail` of a file-level rule (DQ-90, control totals) also fails the run: the data cannot be trusted.
 import { DEFAULT_POLICIES, parseDate, type CalcPolicies } from "../calc";
 import { ENTITIES } from "../ingest";
-import { contractViolations, sortResults } from "./contract";
+import { areaOf, contractViolations, sortResults } from "./contract";
 import { DqError } from "./errors";
 import type { Registry } from "./registry";
 import type {
@@ -16,6 +16,7 @@ import type {
   CheckResult,
   Decisions,
   Entity,
+  JournalResult,
   RowUnit,
   RuleFailure,
   RuleId,
@@ -97,10 +98,10 @@ export async function runChecks(options: RunOptions): Promise<RunReport> {
   };
 
   const failures: RuleFailure[] = [];
-  const results = new Map<RuleId, readonly CheckResult[]>();
+  const results = new Map<RuleId, readonly JournalResult[]>();
 
   for (const check of registry.checks) {
-    const area = units(check.entity);
+    const area = areaOf(check, units);
     const { results: checked, failure } = await runOne(check, ctx, area);
     if (failure !== null) failures.push(failure);
     else if (check.entity === "file") {
@@ -111,12 +112,11 @@ export async function runChecks(options: RunOptions): Promise<RunReport> {
     }
     results.set(check.id, checked);
     await sink.writeResults(runId, check, checked);
-    if (check.entity !== "file") {
-      for (const r of checked) {
-        const list = resultsSoFar.get(r.unitId) ?? [];
-        list.push({ check, result: r });
-        resultsSoFar.set(r.unitId, list);
-      }
+    for (const r of checked) {
+      if (r.entity === "file") continue;
+      const list = resultsSoFar.get(r.unitId) ?? [];
+      list.push({ check, result: r });
+      resultsSoFar.set(r.unitId, list);
     }
   }
 
@@ -140,7 +140,7 @@ async function runOne(
   check: Check,
   ctx: CheckContext,
   area: readonly AnyUnit[],
-): Promise<{ results: readonly CheckResult[]; failure: RuleFailure | null }> {
+): Promise<{ results: readonly JournalResult[]; failure: RuleFailure | null }> {
   const run = check.engine === "sql" && ctx.db === undefined ? check.runTs : check.run.bind(check);
   if (run === undefined) {
     return errored(check, area, "an SQL rule without a TS twin cannot run without a database");
@@ -155,12 +155,15 @@ async function runOne(
   if (violations.length > 0) {
     return errored(check, area, `broke the contract: ${violations.join("; ")}`);
   }
-  return { results: sortResults(returned), failure: null };
+  const entityOf = new Map(area.map((u) => [u.unitId, u.entity]));
+  return { results: sortResults(returned.map((r) => ({ ...r, entity: entityOf.get(r.unitId)! }))), failure: null };
 }
 
 function errored(check: Check, area: readonly AnyUnit[], message: string) {
   const results = sortResults(
-    area.map((u) => ({ unitId: u.unitId, recordKey: u.recordKey, outcome: "error" as const, reason: message })),
+    area.map(
+      (u): JournalResult => ({ unitId: u.unitId, recordKey: u.recordKey, entity: u.entity, outcome: "error", reason: message }),
+    ),
   );
   return { results, failure: { ruleId: check.id, message } };
 }

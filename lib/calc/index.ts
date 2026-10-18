@@ -6,7 +6,7 @@ export * from "./primitives/rate";
 export * from "./primitives/rounding";
 export * from "./primitives/allocate";
 export * from "./primitives/calendar";
-export { resolveCommissionRule, calculateManagementFee } from "./commission";
+export { commissionRulesOn, resolveCommissionRule, calculateManagementFee } from "./commission";
 export {
   calculateNetRental,
   calculateExpectedPayout,

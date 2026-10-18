@@ -14,7 +14,7 @@ describe("MemorySink", () => {
     expect(sink.run(run1).status).toBe("running");
 
     const check = failAlways({ id: "DQ-08", action: "review", entity: "reservation" });
-    await sink.writeResults(run1, check, [{ unitId: "r:2", recordKey: "R0001", outcome: "fail", amountIdr: 5n }]);
+    await sink.writeResults(run1, check, [{ unitId: "r:2", recordKey: "R0001", entity: "reservation", outcome: "fail", amountIdr: 5n }]);
     await sink.writeVerdicts(run1, [
       { unitId: "r:2", entity: "reservation", recordKey: "R0001", status: "review", ruleIds: ["DQ-08"], decisionId: null },
     ]);
@@ -63,7 +63,7 @@ describe("journalOf", () => {
     const b = await sink.startRun(meta);
     const check = failAlways({ id: "DQ-08" });
     for (const id of [a, b]) {
-      await sink.writeResults(id, check, [{ unitId: "r:2", recordKey: "R0001", outcome: "fail", amountIdr: 12345678901234n }]);
+      await sink.writeResults(id, check, [{ unitId: "r:2", recordKey: "R0001", entity: "reservation", outcome: "fail", amountIdr: 12345678901234n }]);
     }
     const text = journalOf(sink.run(a));
     expect(text).toBe(journalOf(sink.run(b)));

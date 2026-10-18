@@ -6,7 +6,8 @@
 //   4. fail with review, or decision finance_only   → review
 //   5. otherwise (also after accept/keep_published) → clean; info never changes the status
 // `ruleIds` are the rules that set the status, `decisionId` the decision that did; the journal
-// shows where a rule decided and where a human did.
+// shows where a rule decided and where a human did. The action of a `fail` is the result's own
+// when it has one (DQ-05: exclude or hold), otherwise the rule's.
 import type { Action, Check, CheckResult, Decision, RowUnit, RuleId, Verdict } from "./types";
 
 export interface RuleResult {
@@ -14,9 +15,13 @@ export interface RuleResult {
   readonly result: CheckResult;
 }
 
+export function actionOf(r: RuleResult): Action {
+  return r.result.action ?? r.check.action;
+}
+
 export function verdictFor(unit: RowUnit, results: readonly RuleResult[], decision: Decision | null): Verdict {
   const fails = (action: Action): RuleId[] =>
-    results.filter((r) => r.result.outcome === "fail" && r.check.action === action).map((r) => r.check.id);
+    results.filter((r) => r.result.outcome === "fail" && actionOf(r) === action).map((r) => r.check.id);
   const base = { unitId: unit.unitId, entity: unit.entity, recordKey: unit.recordKey };
 
   const duplicate = fails("duplicate");

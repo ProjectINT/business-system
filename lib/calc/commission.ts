@@ -5,6 +5,17 @@ import { applyRate } from "./primitives/rate";
 import type { RoundingMode } from "./primitives/rounding";
 import type { CommissionRuleInput, ReservationInput } from "./types";
 
+/** Every rule of the villa whose period covers `date` (effectiveTo inclusive, null — open-ended). */
+export function commissionRulesOn(
+  rules: readonly CommissionRuleInput[],
+  propertyId: string,
+  date: CalendarDate,
+): CommissionRuleInput[] {
+  return rules.filter(
+    (r) => r.propertyId === propertyId && r.effectiveFrom <= date && (r.effectiveTo === null || date <= r.effectiveTo),
+  );
+}
+
 /**
  * The rule in force on `date` (the check-in date): effectiveFrom ≤ date ≤ effectiveTo.
  * Overlapping periods are a rate change, not an error (PLAN.md decision log, 2026-10-18; DQ-22 flags them):
@@ -15,9 +26,7 @@ export function resolveCommissionRule(
   propertyId: string,
   date: CalendarDate,
 ): CommissionRuleInput {
-  const matches = rules.filter(
-    (r) => r.propertyId === propertyId && r.effectiveFrom <= date && (r.effectiveTo === null || date <= r.effectiveTo),
-  );
+  const matches = commissionRulesOn(rules, propertyId, date);
   if (matches.length === 0) {
     throw new CalcError("NO_COMMISSION_RULE", `No commission rule for ${propertyId} on ${date}`, { propertyId, date });
   }

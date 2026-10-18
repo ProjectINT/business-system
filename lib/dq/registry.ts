@@ -1,5 +1,5 @@
-// The list of rules and their execution order. The order follows `dependsOn` (VALIDATION_PLAN.md 5);
-// among rules that are ready at the same time, registration order holds, so the order is stable.
+// The list of rules and their execution order. The order follows `dependsOn` (VALIDATION_PLAN.md 5)
+// and otherwise registration order, so a registry listed by stage runs by stage and the order is stable.
 import { DqError } from "./errors";
 import type { Check, RuleId } from "./types";
 
@@ -33,24 +33,23 @@ export function createRegistry(checks: readonly Check[]): Registry {
   return { checks: ordered, get: (id) => byId.get(id) };
 }
 
-/** Kahn's algorithm with a queue kept in registration order. Throws on a cycle. */
+/**
+ * Topological order that keeps registration order wherever dependencies allow: the first registered
+ * rule whose dependencies are done goes next. A registry listed by stage runs by stage. Throws on a cycle.
+ */
 export function orderChecks(checks: readonly Check[]): Check[] {
-  const remaining = new Map<RuleId, Set<RuleId>>(checks.map((c) => [c.id, new Set(c.dependsOn)]));
   const ordered: Check[] = [];
   const done = new Set<RuleId>();
-
   while (ordered.length < checks.length) {
-    const ready = checks.filter((c) => !done.has(c.id) && [...remaining.get(c.id)!].every((d) => done.has(d)));
-    if (ready.length === 0) {
+    const next = checks.find((c) => !done.has(c.id) && c.dependsOn.every((d) => done.has(d)));
+    if (next === undefined) {
       const stuck = checks.filter((c) => !done.has(c.id)).map((c) => c.id);
       throw new DqError("DEPENDENCY_CYCLE", `Rules depend on each other: ${stuck.join(", ")}`, {
         rules: stuck.join(","),
       });
     }
-    for (const c of ready) {
-      ordered.push(c);
-      done.add(c.id);
-    }
+    ordered.push(next);
+    done.add(next.id);
   }
   return ordered;
 }

@@ -324,7 +324,7 @@ interface Scope {
 |---|---|---|
 | `calculateAccruals(calcs, expenses, scope)` | Gross bookings, возвраты, OTA fees, чистая выручка аренды, Management fees, опер. расходы, ночи, отмены справочно | строки ночей с `date` в периоде; расходы по `expense_date`, `paid` + `pending` |
 | `calculateCashFlow(payments, expenses, scope)` | поступления, оплаченные расходы, чистый денежный поток | платежи по `payment_date`; расходы `paid` по `expense_date` |
-| `reconcileReservation(calc, payments, asOf)` | ожидалось, получено, разница, статус | платежи брони любой датой |
+| `reconcileReservation(calc, payments, asOf, policies)` | ожидалось, получено, разница, статус | платежи брони любой датой; срок — по политике `paymentDue` |
 | `reconcile(calcs, payments, scope, policies)` | строки сверки и итоги | бронь по политике `reconciliationDate` (раздел 7) |
 | `estimateOwnerBalance(accruals)` | `{ amount, isEstimate: true, missing[] }` | `чистая выручка − MF − опер. расходы` |
 | `calculateOverview(input, scope, policies)` | всё выше по объектам и по портфелю, плюс `failures` | — |
@@ -334,10 +334,12 @@ interface Scope {
 | Условие | Статус |
 |---|---|
 | получено = ожидалось | `matched` (сошлось) |
-| проживание закончилось к `asOf` (`check_out ≤ asOf`), получено 0, ожидалось > 0 | `not_received` (не получено) |
-| проживание закончилось, 0 < получено < ожидалось | `underpaid` (недоплата) |
+| срок наступил (`paymentDue: 'check_in'` — `check_in ≤ asOf`; `'check_out'` — `check_out ≤ asOf`), получено 0, ожидалось > 0 | `not_received` (не получено) |
+| срок наступил, 0 < получено < ожидалось | `underpaid` (недоплата) |
 | получено > ожидалось | `overpaid` (переплата) |
-| проживание не закончилось, получено < ожидалось | `not_due` (срок не наступил) |
+| срок не наступил, получено < ожидалось | `not_due` (срок не наступил) |
+
+По умолчанию `paymentDue: 'check_in'`: вилла оплачивается полностью до заезда (решение 2026-10-18), поэтому «срок не наступил» только у броней с заездом после даты среза; всё остальное без полной оплаты — долг. Это та же граница, что у DQ-16.
 
 Платёж P0051 по R0102 даёт `matched`: 3 998 667 = 3 898 667 − (−100 000). Сверка проверяет только арифметику, а сомнительность самой брони показывают DQ-08 и DQ-14.
 
@@ -354,7 +356,7 @@ interface CalcPolicies {
   revenueRecognition: 'nights' | 'checkout';      // по умолчанию 'nights'
   rounding: RoundingMode;                         // 'half-up'
   reconciliationDate: 'check_out' | 'last_night'; // 'check_out' — как в PLAN.md, 7.1; см. вопрос 3
-  paymentDue: 'check_in' | 'check_out';           // 'check_in' — оплата 100% до заезда (PLAN.md, журнал 2026-10-18); в коде пока нет
+  paymentDue: 'check_in' | 'check_out';           // 'check_in' — оплата 100% до заезда (PLAN.md, журнал 2026-10-18); сделано в фазе 3
 }
 
 export const DEFAULT_POLICIES: CalcPolicies = Object.freeze({ ... });
@@ -660,7 +662,7 @@ Stryker с vitest-runner на `lib/calc`, цель — не меньше 95% у�
 - **Папка:** `lib/calc/` вместо `src/lib/finance/` (PLAN.md, 10). Приложение живёт в корне, без `src/`, как и `lib/dq/`.
 - **Политики:** `lib/calc/policies.ts` вместо `src/lib/domain/policies.ts` (PLAN.md, 7.7). Так модуль самодостаточен; DQ импортирует политики из `@/lib/calc`.
 - **Округление:** «half-up» из PLAN.md, 7.3 уточнено как «половина от нуля». Это важно для отрицательных сумм (R0102) и совпадает с `round(numeric)` в Postgres.
-- **Сверка:** добавлен статус `not_due` для проживаний, не закончившихся к дате среза. Иначе будущие брони выглядели бы как дебиторка. Дата отнесения брони к периоду сверки вынесена в политику.
+- **Сверка:** добавлен статус `not_due` для броней, срок оплаты которых не наступил к дате среза. Иначе будущие брони выглядели бы как дебиторка. Дата отнесения брони к периоду сверки и день срока оплаты вынесены в политики (`reconciliationDate`, `paymentDue`).
 - **Эталон V011** (PLAN.md, 11.2): там сказано «без аномалий», но 3 из 4 броней — `review` (DQ-11, DQ-13). Они не исключены, эталон считается с `includeReview = true`.
 - **`lib/format.ts`** принимает `number`, а будет принимать `number | bigint`.
 - **`tsconfig.json`:** `target` меняется с `ES2017` на `ES2022`, иначе литералы `bigint` не компилируются.
@@ -674,7 +676,8 @@ Stryker с vitest-runner на `lib/calc`, цель — не меньше 95% у�
 - `vitest.config.mts` (а не `.ts`): проект — CommonJS, vite предупреждает о ESM-конфиге. `@types/node` поднят до `^24` (требование vitest 5, рантайм — Node 24).
 - Фикстуры — дословные строки CSV, их совпадение с `Technical_Challenge_Data` проверяет `testing/fixtures.test.ts`.
 - Не сделано: подключение дашборда к расчётам (этап 5 — нужен загрузчик и DQ-статусы), эталон по всему набору (11.6), Stryker.
-- Не сделано: политика `paymentDue` (решение 2026-10-18, оплата до заезда). Сейчас `not_due` в сверке проверяет `check_out > asOf`; должно быть `check_in > asOf`. Менять вместе с DQ-16.
+- Политика `paymentDue` (решение 2026-10-18, оплата до заезда) сделана 2026-10-19 в фазе 3 вместе с DQ-16: `not_due` в сверке — `check_in > asOf` при `'check_in'` (по умолчанию), `check_out > asOf` при `'check_out'`. `reconcileReservation` получил четвёртый аргумент `policies`.
+- `commissionRulesOn(rules, propertyId, date)` вынесена из `resolveCommissionRule` и экспортирована: DQ-17 через неё видит, что правила на дату нет или их два с одной датой начала, не ловя исключений.
 
 ## 14. Открытые вопросы
 

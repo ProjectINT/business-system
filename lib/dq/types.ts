@@ -53,6 +53,12 @@ export interface CheckResult {
   /** Natural key of the row (R0015, P0075); `null` for a file or a row without a key. */
   readonly recordKey: string | null;
   readonly outcome: Outcome;
+  /**
+   * What this `fail` means for the row, when it differs from the rule's `action`: DQ-05 excludes a
+   * payment whose reservation is missing and holds one whose reservation waits for a decision.
+   * Written to `dq_check_result.action` as is.
+   */
+  readonly action?: Action;
   /** Mandatory for `skip`: "not checked" must differ from "checked, fine". */
   readonly reason?: string;
   /** Facts, not text: amounts, rate, overlap interval. The UI builds the message. */
@@ -63,12 +69,19 @@ export interface CheckResult {
   readonly amountIdr?: bigint;
 }
 
+/** A result as the journal keeps it: with the entity of its unit (`dq_check_result.entity`). */
+export interface JournalResult extends CheckResult {
+  readonly entity: Entity;
+}
+
 export interface Check<E extends Entity = Entity> {
   readonly id: RuleId;
   /** Bumped when the logic changes. */
   readonly version: number;
   readonly title: string;
-  readonly entity: E;
+  /** The area: one entity, or several row entities (DQ-01 checks every row of every file). */
+  readonly entity: E | readonly E[];
+  /** What `fail` means for the row's status; a result may override it (`CheckResult.action`). */
   readonly action: Action;
   readonly engine: "ts" | "sql";
   /** Rules whose verdicts this one reads through `statusSoFar`. */
@@ -168,7 +181,7 @@ export interface RunClose {
 /** Journal of runs: memory at level 1, Postgres at level 2 (VALIDATION_PLAN.md 4). */
 export interface Sink {
   startRun(meta: RunMeta): Promise<string>;
-  writeResults(runId: string, check: Check, results: readonly CheckResult[]): Promise<void>;
+  writeResults(runId: string, check: Check, results: readonly JournalResult[]): Promise<void>;
   writeVerdicts(runId: string, verdicts: readonly Verdict[]): Promise<void>;
   finishRun(runId: string, close: RunClose): Promise<void>;
 }
@@ -177,7 +190,7 @@ export interface RunReport {
   readonly runId: string;
   readonly status: Exclude<RunStatus, "running">;
   readonly meta: RunMeta;
-  readonly results: ReadonlyMap<RuleId, readonly CheckResult[]>;
+  readonly results: ReadonlyMap<RuleId, readonly JournalResult[]>;
   readonly verdicts: readonly Verdict[];
   readonly summary: RunSummary;
 }

@@ -1,5 +1,6 @@
 // Small datasets for rule tests, built through the real parser so that hashes, unit ids and
 // parse issues are the ones production rows have. Values are CSV text; a missing column is "".
+import { addDays, parseDate } from "../../calc";
 import { FIELDS, FILE_NAMES, ENTITIES, parseCsv, type Dataset, type Entity } from "../../ingest";
 
 export type CsvRow = Readonly<Record<string, string>>;
@@ -80,3 +81,9 @@ export const EXPENSE: CsvRow = {
   currency: "IDR",
   payment_status: "paid",
 };
+
+/** The same reservations with distinct stays that do not overlap: 1–4 Sep, 5–8 Sep, … (keeps DQ-12 quiet). */
+export function apart(rows: readonly CsvRow[]): CsvRow[] {
+  const start = parseDate("2026-09-01");
+  return rows.map((row, i) => ({ ...row, check_in: addDays(start, 4 * i), check_out: addDays(start, 4 * i + 3) }));
+}

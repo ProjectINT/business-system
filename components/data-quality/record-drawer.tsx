@@ -4,6 +4,8 @@
 // it, and every rule's result on it — passed, failed with its facts, skipped with the reason.
 import { Button, Chip, Drawer, Tooltip } from "@heroui/react";
 import type { RuleInfo } from "@/lib/data";
+import { RuleMark } from "@/components/rules/rule-badge";
+import { ruleMeta } from "@/components/rules/rule-meta";
 import { ACTION_LABEL, STATUS_META } from "@/components/status-meta";
 import { OUTCOME_META } from "./labels";
 import type { RecordView } from "./view-of";
@@ -58,7 +60,7 @@ function Card({ record, ruleOf, onOpenKey, canOpen }: Omit<Props, "record" | "on
         <p className="text-sm text-muted">
           {record.statusRules.length === 0
             ? meta.description
-            : `${meta.description}. Set by ${record.statusRules.map((id) => `${id} ${ruleOf.get(id)?.title ?? ""}`.trim()).join(", ")}.`}
+            : `${meta.description}. Set by: ${record.statusRules.map((id) => ruleMeta(id).label).join(", ")}.`}
         </p>
       </Drawer.Header>
 
@@ -69,7 +71,7 @@ function Card({ record, ruleOf, onOpenKey, canOpen }: Omit<Props, "record" | "on
           </h3>
           <ol className="flex flex-col divide-y divide-separator rounded-xl border border-separator">
             {checks.map((c) => (
-              <li key={c.ruleId} className="flex gap-3 px-3 py-2.5">
+              <li key={c.ruleId} className="flex items-start gap-3 px-3 py-2.5">
                 <Chip
                   size="sm"
                   variant={c.outcome === "fail" ? "soft" : "secondary"}
@@ -78,9 +80,10 @@ function Card({ record, ruleOf, onOpenKey, canOpen }: Omit<Props, "record" | "on
                 >
                   {OUTCOME_META[c.outcome].label}
                 </Chip>
+                <RuleMark id={c.ruleId} action={c.outcome === "fail" ? c.action : undefined} />
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="text-sm">
-                    <span className="font-mono text-xs text-muted">{c.ruleId}</span> {ruleOf.get(c.ruleId)?.title ?? c.ruleId}
+                    {ruleOf.get(c.ruleId)?.title ?? ruleMeta(c.ruleId).label}
                     {c.action !== undefined && <span className="text-xs text-muted"> · {ACTION_LABEL[c.action]}</span>}
                   </span>
                   {c.text !== undefined && (

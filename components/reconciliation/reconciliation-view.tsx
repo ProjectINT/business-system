@@ -5,6 +5,9 @@ import { useMemo, useState } from "react";
 import type { ReconciliationStatus, View } from "@/lib/calc";
 import type { ReconciliationRow, ReconciliationView as Model, RuleInfo } from "@/lib/data";
 import { count, idrFull, idrSignedCompact } from "@/lib/format";
+import { RuleBadges } from "@/components/rules/rule-badge";
+import { RuleLegendButton } from "@/components/rules/rule-legend";
+import { ruleSearchText } from "@/components/rules/rule-meta";
 import { RECONCILIATION_META, RECONCILIATION_ORDER, STATUS_META } from "@/components/status-meta";
 
 type Row = View<ReconciliationRow>;
@@ -51,21 +54,7 @@ function Tile({ label, value, underReview, includeReview, hint }: {
 }
 
 function RuleChips({ ids, ruleOf }: { ids: string[]; ruleOf: Map<string, RuleInfo> }) {
-  if (ids.length === 0) return <span className="text-muted">—</span>;
-  return (
-    <div className="flex flex-wrap gap-1">
-      {ids.map((id) => (
-        <Tooltip key={id} delay={200}>
-          <Tooltip.Trigger>
-            <Chip size="sm" variant="secondary" className="cursor-help font-mono">
-              {id}
-            </Chip>
-          </Tooltip.Trigger>
-          <Tooltip.Content>{ruleOf.get(id)?.title ?? id}</Tooltip.Content>
-        </Tooltip>
-      ))}
-    </div>
-  );
+  return <RuleBadges rules={ids.map((id) => ({ id, action: ruleOf.get(id)?.action }))} />;
 }
 
 export function ReconciliationView({
@@ -90,7 +79,7 @@ export function ReconciliationView({
     return rows.filter(
       (r) =>
         (status === ALL || r.status === status) &&
-        (q === "" || `${r.reservationId} ${r.propertyId} ${r.paymentIds.join(" ")} ${r.ruleIds.join(" ")}`.toLowerCase().includes(q)),
+        (q === "" || `${r.reservationId} ${r.propertyId} ${r.paymentIds.join(" ")} ${r.ruleIds.map(ruleSearchText).join(" ")}`.toLowerCase().includes(q)),
     );
   }, [rows, status, query]);
 
@@ -144,13 +133,16 @@ export function ReconciliationView({
               </Tabs.List>
             </Tabs.ListContainer>
           </Tabs>
-          <SearchField aria-label="Search reservations" className="w-64" value={query} onChange={setQuery}>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input placeholder="Search reservation, villa, payment…" />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
+          <div className="flex items-center gap-2">
+            <RuleLegendButton ruleOf={ruleOf} />
+            <SearchField aria-label="Search reservations" className="w-64" value={query} onChange={setQuery}>
+              <SearchField.Group>
+                <SearchField.SearchIcon />
+                <SearchField.Input placeholder="Search reservation, villa, payment…" />
+                <SearchField.ClearButton />
+              </SearchField.Group>
+            </SearchField>
+          </div>
         </div>
 
         <Table>

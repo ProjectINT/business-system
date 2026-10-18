@@ -14,7 +14,7 @@
 - `app.stage_file` на SQL (раздел 7) с `try_date` / `try_numeric`;
 - раннер проверок с журналом в Postgres (`dq_run`, `dq_check_result`, `dq_record_verdict`), публикация одной транзакцией с `record_version` и `occupancy` (VALIDATION_PLAN.md, 5);
 - шлюз разбора (раздел 8): первый запуск публикует записи без сомнений, пачка со случаями останавливается в `needs_review`, кнопка **Publish decisions** синхронно запускает запуск с решениями и публикацию записей решённых случаев. Без экрана разбора (PLAN.md, этап 12) в данных останутся неопубликованными 35 случаев: 86 броней в пересечениях и 3 modified. Поэтому этап 12 идёт сразу за импортом;
-- запуск синхронно в одном процессе: `npm run import` (CLI по CSV из репозитория) и кнопка **Load sample data** на `/imports` через server function; страница `/imports` читает `import_batch`, `import_file`, `dq_run.summary` вместо мока.
+- запуск синхронно в одном процессе: `npm run import` (CLI по CSV из репозитория) и кнопка **Load sample data** на вкладке Batches (`/import`) через server function; вкладка читает `import_batch`, `import_file`, `dq_run.summary` вместо мока.
 
 Откладывается: загрузка файлов из браузера и Storage (раздел 3), очередь `import_job` и обработчик с `after()` (раздел 4), pg_net / pg_cron / Vault (4.2), сопоставление колонок и DeepSeek (раздел 5; только точное совпадение с нашим форматом, зашитое в `targets.ts`), опрос прогресса и `import_event` (разделы 9–10). Каждый из этих кусков добавляется поверх урезанной версии без переделки: таблицы и шаги те же, меняется только то, кто и когда их вызывает.
 
@@ -64,7 +64,7 @@ flowchart LR
 4. Кнопка **Start import** доступна, когда в пачке хотя бы один файл, у каждого файла есть сущность и сущности не повторяются (`import_file_one_per_entity`). Все пять файлов не требуются: недостающие сущности правила берут из действующего набора (VALIDATION_PLAN.md, 2). Server function `startBatch` переводит пачку в `queued` и вставляет задачи `map_columns` по файлам.
 5. Файл, чей `(entity, sha256)` уже загружен прежней пачкой (индекс `import_file_sha256`), получает `skipped` со ссылкой на тот файл: его строки не читаются, задачи по нему не ставятся. Если так пропущены все файлы, пачка сразу получает `skipped` со ссылкой на пачку последнего из них (PLAN.md, 9). Обработчик на шаге `load_raw` пересчитывает sha256 ещё раз: объект в Storage мог подменить тот, у кого есть секретный ключ.
 
-Bucket `imports` приватный: читает и выдаёт signed URL только сервер с секретным ключом. **Load sample data** на странице `/imports` кладёт пять файлов из `Technical_Challenge_Data` в Storage тем же способом и идёт тем же конвейером (файлы попадают в бандл Vercel через `outputFileTracingIncludes`, PLAN.md, 13).
+Bucket `imports` приватный: читает и выдаёт signed URL только сервер с секретным ключом. **Load sample data** на вкладке Batches (`/import`) кладёт пять файлов из `Technical_Challenge_Data` в Storage тем же способом и идёт тем же конвейером (файлы попадают в бандл Vercel через `outputFileTracingIncludes`, PLAN.md, 13).
 
 Пачки, которые остались в `uploading` дольше суток, помечаются `failed` («abandoned») и их объекты удаляются — отдельной задачей `pg_cron` раз в сутки, после первой версии.
 
@@ -262,17 +262,17 @@ Route handler Next.js `POST /api/import/worker`, `runtime = 'nodejs'`, `maxDurat
 | `details` | jsonb: строки куска, `mapping_id`, ошибка со стеком, `attempt` |
 | `at` | время |
 
-Объём: событие на кусок в 500 строк, на 100 тыс. строк — 200 событий, пустяк. Страница журнала (`/imports`) читает `import_batch`, `import_file`, `import_job` и `import_event` вместо `lib/mock/imports.ts`. Форма данных в моке близка: шаги пачки — задачи, события — `import_event`, счётчики по файлам (new / changed / unchanged) — из `dq_run.summary`. Кнопка **Re-import CSV** становится **Load sample data** (раздел 3).
+Объём: событие на кусок в 500 строк, на 100 тыс. строк — 200 событий, пустяк. Журнал пачек (вкладка Batches, `/import`) читает `import_batch`, `import_file`, `import_job` и `import_event` вместо `lib/mock/imports.ts`. Форма данных в моке близка: шаги пачки — задачи, события — `import_event`, счётчики по файлам (new / changed / unchanged) — из `dq_run.summary`. Кнопка **Re-import CSV** становится **Load sample data** (раздел 3).
 
 ## 10. Интерфейс
 
-Новый пункт меню **Data upload**, страница `/imports/upload`. Подписи по-английски, как во всём интерфейсе.
+Нового пункта меню нет: в боковой панели только Dashboard и Import (PLAN.md 15, 2026-10-19). Загрузка — вкладка **Upload** раздела Import, страница `/import/upload`. Подписи по-английски, как во всём интерфейсе. Правила в ленте и на шагах показываются значками (`RuleBadge`, PLAN.md 8).
 
 1. **Выбор файлов.** Зона перетаскивания, несколько CSV, поле даты среза. По каждому файлу: имя, размер, сущность (определена или выпадающий список), статус загрузки в Storage. Кнопка **Start import** и условия её доступности (раздел 3).
 2. **Сопоставление.** Если у файла задача `waiting_user`: таблица «поле → колонка источника», источник (exact / cache / AI / manual) и уверенность, кнопка **Confirm mapping**.
 3. **Прогресс.** По каждому файлу шаги Uploaded → Columns mapped → Raw rows (полоса `done / total`) → Staged. Ниже — шаги пачки Validation (правила `x / N`) → Publishing (опубликовано строк, ждёт решения строк) → Review (случаи `x / N`, кнопка **Open review** на `/review`) → Publishing decisions → Done. Шаги Review и Publishing decisions видны только у пачки со случаями. У упавшего шага — ошибка и кнопка **Retry**.
 4. **Лента событий.** Последние `import_event` пачки, новые сверху, ошибки выделены.
-5. **Пока пачка ждёт разбора**, дашборд считает по опубликованному, включая записи без сомнений из этой пачки, с баннером «пачка от <дата> ждёт разбора: N случаев, M броней на X IDR не в расчётах» и ссылкой на `/review`. Без базы дашборд работает на CSV (режим уровня 1), там `pending` показываются как `review` (VALIDATION_PLAN.md, 7.5).
+5. **Пока пачка ждёт разбора**, дашборд считает по опубликованному, включая записи без сомнений из этой пачки. Баннер «пачка от <дата> ждёт разбора: N случаев, M броней на X IDR не в расчётах» со ссылкой на `/review` показывается в разделе Import. Показывать ли его и на обзоре, не решено (ROADMAP.md 6): по решению 2026-10-19 на обзоре сигналов об ошибках нет. Без базы дашборд работает на CSV (режим уровня 1), там `pending` показываются как `review` (VALIDATION_PLAN.md, 7.5).
 
 Прогресс приходит опросом `GET /api/imports/[batchId]/progress` раз в секунду, пока пачка не в конечном статусе (`params` в Next.js 16 — промис, ответ с `cache-control: no-store`). Supabase Realtime не используем: схема `app` закрыта от Data API и RLS, открывать её ради подписки незачем, а опрос раз в секунду для одного пользователя ничего не стоит.
 
@@ -332,8 +332,8 @@ lib/import/
 lib/db.ts                             postgres-js, prepare: false
 app/api/import/worker/route.ts        вход для pg_net: секрет, 202, after()
 app/api/imports/[batchId]/progress/route.ts
-app/imports/upload/page.tsx
-app/imports/actions.ts                createUpload, registerFile, startBatch, confirmMapping, retryJob, loadSampleData
+app/import/upload/page.tsx
+app/import/actions.ts                 createUpload, registerFile, startBatch, confirmMapping, retryJob, loadSampleData
 app/review/page.tsx                   разбор случаев пачки (VALIDATION_PLAN.md, 7.5)
 app/review/actions.ts                 resolveCase, publishDecisions, exportCasesCsv
 components/imports/upload/            выбор файлов, сопоставление, прогресс, лента
@@ -369,7 +369,7 @@ scripts/import-worker.ts              локальный цикл для раз�
 | 2 | Загрузка в Storage: `createUpload`, signed URL, `registerFile` с хэшем и сущностью, `startBatch` с проверкой близнецов по файлам, страница выбора файлов | 50 мин | |
 | 3 | Очередь и обработчик: выбор задачи, аренда, yield, повторы, журнал событий, route handler с `after()`, локальный цикл | 50 мин | |
 | 4 | `map_columns` только по точному совпадению, `load_raw` кусками, `row_hash`, `stage` на SQL, заглушки `validate` / `publish` | 50 мин | |
-| 5 | Прогресс и лента событий в интерфейсе; журнал `/imports` на реальных данных; Load sample data | 50 мин | |
+| 5 | Прогресс и лента событий в интерфейсе; журнал пачек (`/import`) на реальных данных; Load sample data | 50 мин | |
 | 6 | `pg_cron` + `pg_net` + Vault, проверка на Vercel | 30 мин | |
 | 7 | DeepSeek: кэш, запрос, проверка ответа, экран подтверждения (необязательный, можно отложить) | 60 мин | |
 | 8 | Подключение `validate` / `publish` к модулю проверки; `publish` первым запуском без записей `pending`; шаг `review`: статус `needs_review`, `publishDecisions`, запуск с решениями без пачки, индекс одного запуска на шлюзе | по VALIDATION_PLAN.md + 30 мин | |
@@ -381,7 +381,7 @@ scripts/import-worker.ts              локальный цикл для раз�
 
 ## 15. Расхождения с PLAN.md
 
-- **Источник загрузки:** в PLAN.md кнопка на `/imports` заново импортирует CSV из репозитория. Теперь основной путь — файлы из интерфейса через Storage. CSV из репозитория остаётся как кнопка **Load sample data**, которая кладёт те же пять файлов в Storage и идёт тем же конвейером.
+- **Источник загрузки:** в PLAN.md кнопка на `/import` заново импортирует CSV из репозитория. Теперь основной путь — файлы из интерфейса через Storage. CSV из репозитория остаётся как кнопка **Load sample data**, которая кладёт те же пять файлов в Storage и идёт тем же конвейером.
 - **Синхронный импорт CLI** (`npm run import`) заменяется постановкой пачки в очередь; локально её отрабатывает `npm run import:worker`.
 - **`raw_record.payload`** хранит исходные имена колонок, а не поля нашего формата. Сопоставление — отдельный версионируемый объект (`column_mapping`). `row_hash` при этом считается по полям нашего формата.
 - **Статусы `import_batch`** расширены (раздел 11), `loading` заменён на `uploading` / `queued` / `processing`.

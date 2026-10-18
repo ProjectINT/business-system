@@ -9,6 +9,9 @@ import { useMemo, useState } from "react";
 import type { RuleInfo } from "@/lib/data";
 import type { RowEntity, Status } from "@/lib/dq";
 import { count, idrFull } from "@/lib/format";
+import { RuleBadge, RuleBadges, RuleMark } from "@/components/rules/rule-badge";
+import { RuleLegendButton } from "@/components/rules/rule-legend";
+import { ruleMeta, ruleSearchText } from "@/components/rules/rule-meta";
 import { ACTION_LABEL, STATUS_META, STATUS_ORDER } from "@/components/status-meta";
 import { CaseList } from "./case-list";
 import { GbvChart, type GbvPoint } from "./gbv-chart";
@@ -30,7 +33,7 @@ export function DataQualityView({ model, gbv }: { model: DataQualityModel; gbv: 
     [model.rules],
   );
   const recordOf = useMemo(() => new Map(model.records.map((r) => [r.unitId, r])), [model.records]);
-  /** Natural key → the row it names; an exact copy (DQ-01) never wins over the first row. */
+  /** Natural key → the row it names; an exact copy never wins over the first row. */
   const unitOfKey = useMemo(() => {
     const out = new Map<string, string>();
     for (const r of model.records) if (r.status !== "duplicate" && !out.has(r.key)) out.set(r.key, r.unitId);
@@ -215,7 +218,7 @@ function ControlTotals({ files }: { files: FileView[] }) {
                 <Table.Column className="text-end">= In the figures</Table.Column>
                 <Table.Column className="text-end">+ Excluded</Table.Column>
                 <Table.Column className="text-end">+ Duplicates</Table.Column>
-                <Table.Column>DQ-90</Table.Column>
+                <Table.Column>Check</Table.Column>
               </Table.Header>
               <Table.Body>
                 {lines.map((l) => (
@@ -275,10 +278,8 @@ function RulesTable({ rules, onShow }: { rules: RuleView[]; onShow: (id: string)
           }}
         >
           <Table.Header>
-            <Table.Column isRowHeader className="w-20">
-              Rule
-            </Table.Column>
-            <Table.Column>Check</Table.Column>
+            <Table.Column className="w-14">Badge</Table.Column>
+            <Table.Column isRowHeader>Problem it finds</Table.Column>
             <Table.Column>Area</Table.Column>
             <Table.Column>When it fails</Table.Column>
             <Table.Column className="text-end">Pass</Table.Column>
@@ -291,10 +292,13 @@ function RulesTable({ rules, onShow }: { rules: RuleView[]; onShow: (id: string)
               const split = Object.entries(r.failsByAction);
               return (
                 <Table.Row key={r.id} id={r.id} className={r.outcomes.fail > 0 ? "cursor-pointer" : undefined}>
-                  <Table.Cell className="font-mono text-[13px]">{r.id}</Table.Cell>
                   <Table.Cell>
-                    <div className="flex flex-col leading-tight">
-                      <span>{r.title}</span>
+                    <RuleMark id={r.id} action={r.action} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div className="flex max-w-md flex-col gap-0.5 leading-tight">
+                      <span className="font-medium">{ruleMeta(r.id).label}</span>
+                      <span className="text-xs text-muted">{ruleMeta(r.id).description}</span>
                       {r.engine === "sql" && <span className="text-xs text-muted">SQL at level 2, its TS twin here</span>}
                     </div>
                   </Table.Cell>
@@ -321,8 +325,8 @@ function RulesTable({ rules, onShow }: { rules: RuleView[]; onShow: (id: string)
       <Table.Footer className="text-sm text-muted">
         Every rule gives every row of its area a verdict: pass, fail, or skip with a reason. A row that an earlier rule
         excluded is skipped by the later ones, so no amount is in question twice for one rule. “In question” is the rule’s own
-        amount: GBV of a booking, the payment, the shortfall at check-in (DQ-16).
-        Click a rule to see its problems.
+        amount: GBV of a booking, the payment, the shortfall at check-in. The badge is how the rule shows on rows
+        elsewhere; its colour is what happens to the row. Click a rule to see its problems.
       </Table.Footer>
     </Table>
   );
@@ -356,7 +360,7 @@ function Problems({
         (rule === ALL || i.ruleId === rule) &&
         (entity === ALL || i.entity === entity) &&
         (status === ALL || i.status === status) &&
-        (q === "" || `${i.key} ${i.propertyId ?? ""} ${i.ruleId} ${i.text}`.toLowerCase().includes(q)),
+        (q === "" || `${i.key} ${i.propertyId ?? ""} ${ruleSearchText(i.ruleId)} ${i.text}`.toLowerCase().includes(q)),
     );
   }, [issues, rule, entity, status, query]);
 
@@ -368,12 +372,12 @@ function Problems({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-3">
         <Filter
-          label="Rule"
+          label="Problem"
           className="w-72"
           value={rule}
           onChange={onRule}
-          options={withFails.map((r) => ({ id: r.id, label: `${r.id} ${r.title} (${r.outcomes.fail})` }))}
-          all="All rules"
+          options={withFails.map((r) => ({ id: r.id, label: `${ruleMeta(r.id).label} (${r.outcomes.fail})` }))}
+          all="All problems"
         />
         <Filter
           label="File"
@@ -398,6 +402,9 @@ function Problems({
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
+        <div className="ms-auto">
+          <RuleLegendButton ruleOf={ruleOf} />
+        </div>
       </div>
 
       <Table>
@@ -408,7 +415,7 @@ function Problems({
                 Record
               </Table.Column>
               <Table.Column className="w-20">Villa</Table.Column>
-              <Table.Column className="w-24">Rule</Table.Column>
+              <Table.Column className="w-16">Issue</Table.Column>
               <Table.Column>Finding</Table.Column>
               <Table.Column className="text-end">In question, IDR</Table.Column>
               <Table.Column>Row status</Table.Column>
@@ -424,16 +431,7 @@ function Problems({
                   </Table.Cell>
                   <Table.Cell className="text-muted">{i.propertyId ?? "—"}</Table.Cell>
                   <Table.Cell>
-                    <Tooltip delay={200}>
-                      <Tooltip.Trigger>
-                        <Chip size="sm" variant="secondary" className="cursor-help font-mono">
-                          {i.ruleId}
-                        </Chip>
-                      </Tooltip.Trigger>
-                      <Tooltip.Content>
-                        {ruleOf.get(i.ruleId)?.title}: {ACTION_LABEL[i.action]}
-                      </Tooltip.Content>
-                    </Tooltip>
+                    <RuleBadge id={i.ruleId} action={i.action} />
                   </Table.Cell>
                   <Table.Cell className="text-sm">{i.text}</Table.Cell>
                   <Table.Cell className="text-end tabular-nums">{i.amount ?? <span className="text-muted">—</span>}</Table.Cell>
@@ -516,7 +514,7 @@ function Excluded({ model, ruleOf, onOpen }: { model: DataQualityModel; ruleOf: 
               <Table.Column>File, line</Table.Column>
               <Table.Column className="w-20">Villa</Table.Column>
               <Table.Column>Status</Table.Column>
-              <Table.Column>Rule</Table.Column>
+              <Table.Column>Issues</Table.Column>
               <Table.Column>Why</Table.Column>
               <Table.Column className="text-end">Amount</Table.Column>
             </Table.Header>
@@ -534,18 +532,7 @@ function Excluded({ model, ruleOf, onOpen }: { model: DataQualityModel; ruleOf: 
                     </Chip>
                   </Table.Cell>
                   <Table.Cell>
-                    <div className="flex flex-wrap gap-1">
-                      {e.rules.map((id) => (
-                        <Tooltip key={id} delay={200}>
-                          <Tooltip.Trigger>
-                            <Chip size="sm" variant="secondary" className="cursor-help font-mono">
-                              {id}
-                            </Chip>
-                          </Tooltip.Trigger>
-                          <Tooltip.Content>{ruleOf.get(id)?.title ?? id}</Tooltip.Content>
-                        </Tooltip>
-                      ))}
-                    </div>
+                    <RuleBadges rules={e.rules.map((id) => ({ id, action: ruleOf.get(id)?.action }))} />
                   </Table.Cell>
                   <Table.Cell className="text-sm">{e.reason}</Table.Cell>
                   <Table.Cell className="text-end tabular-nums">{e.amount ?? "—"}</Table.Cell>

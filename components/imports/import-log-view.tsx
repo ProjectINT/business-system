@@ -9,6 +9,7 @@ import {
   TriangleExclamation,
 } from "@gravity-ui/icons";
 import { useState } from "react";
+import { RuleBadge } from "@/components/rules/rule-badge";
 import {
   BATCH_STATUS_META,
   EVENT_ACTION_META,
@@ -216,7 +217,7 @@ function BatchDetail({ batch }: { batch: ImportBatch }) {
                 <Table.Column>Module</Table.Column>
                 <Table.Column isRowHeader>Record</Table.Column>
                 <Table.Column>Action</Table.Column>
-                <Table.Column>Rule</Table.Column>
+                <Table.Column>Issue</Table.Column>
                 <Table.Column>Details</Table.Column>
               </Table.Header>
               <Table.Body>
@@ -230,7 +231,7 @@ function BatchDetail({ batch }: { batch: ImportBatch }) {
                         {EVENT_ACTION_META[e.action].label}
                       </Chip>
                     </Table.Cell>
-                    <Table.Cell className="font-mono text-xs">{e.rule ?? "—"}</Table.Cell>
+                    <Table.Cell>{e.rule === undefined ? <span className="text-muted">—</span> : <RuleBadge id={e.rule} />}</Table.Cell>
                     <Table.Cell className="text-sm text-muted">{e.message}</Table.Cell>
                   </Table.Row>
                 ))}

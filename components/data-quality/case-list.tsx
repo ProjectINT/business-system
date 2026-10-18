@@ -7,6 +7,7 @@ import { Card, Chip, Tooltip } from "@heroui/react";
 import { addDays, nightsBetween, type CalendarDate } from "@/lib/calc";
 import type { RuleInfo } from "@/lib/data";
 import { count } from "@/lib/format";
+import { RuleBadges } from "@/components/rules/rule-badge";
 import { CASE_TYPE_LABEL, KIND_LABEL } from "./labels";
 import type { CaseCardView, CaseRowView, VillaView } from "./view-of";
 
@@ -196,19 +197,7 @@ function Row({
           </Tooltip>
         </div>
       )}
-      <div className="flex flex-wrap gap-1">
-        {r.flags.length === 0 && <span className="text-muted">—</span>}
-        {r.flags.map((id) => (
-          <Tooltip key={id} delay={200}>
-            <Tooltip.Trigger>
-              <Chip size="sm" variant="secondary" className="cursor-help font-mono">
-                {id}
-              </Chip>
-            </Tooltip.Trigger>
-            <Tooltip.Content>{ruleOf.get(id)?.title ?? id}</Tooltip.Content>
-          </Tooltip>
-        ))}
-      </div>
+      <RuleBadges rules={r.flags.map((id) => ({ id, action: ruleOf.get(id)?.action }))} />
     </>
   );
 }

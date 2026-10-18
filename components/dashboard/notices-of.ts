@@ -3,6 +3,7 @@
 import type { CalcFailure } from "@/lib/calc";
 import type { DataFailure, Snapshot } from "@/lib/data";
 import { idrFull } from "@/lib/format";
+import { ruleMeta } from "@/components/rules/rule-meta";
 import type { Notice } from "./notices";
 
 export function noticesOf(
@@ -18,7 +19,7 @@ export function noticesOf(
     out.push({
       status: "danger",
       title: "Data checks failed: statuses below may be wrong",
-      description: snapshot.report.summary.failures.map((f) => `${f.ruleId}: ${f.message}`).join(" · "),
+      description: snapshot.report.summary.failures.map((f) => `${ruleMeta(f.ruleId).label}: ${f.message}`).join(" · "),
     });
   }
   const refused = failures.calc.length + failures.data.length;

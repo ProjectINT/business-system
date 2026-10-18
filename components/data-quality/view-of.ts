@@ -4,6 +4,7 @@ import { toView, type Money } from "@/lib/calc";
 import { qualityOf, rawTablesOf, type Snapshot } from "@/lib/data";
 import type { Action, Entity, Outcome, RowEntity, RuleId, Status } from "@/lib/dq";
 import { idrCompact, idrFull, moneyDigits, moneyFull } from "@/lib/format";
+import { ruleMeta } from "@/components/rules/rule-meta";
 import { describe } from "./describe";
 
 /** A rule's result on a row; a pass carries nothing else (about 3,400 of the 4,300 results). */
@@ -190,7 +191,7 @@ export function dataQualityOf(snapshot: Snapshot): DataQualityModel {
     asOfDefaulted: snapshot.asOfDefaulted,
     sourceLabel: snapshot.source.label,
     runStatus: snapshot.report.status,
-    runFailures: snapshot.report.summary.failures.map((f) => `${f.ruleId}: ${f.message}`),
+    runFailures: snapshot.report.summary.failures.map((f) => `${ruleMeta(f.ruleId).label}: ${f.message}`),
     counts: { ...q.counts },
     rules: q.rules.map((r) => ({
       id: r.id,

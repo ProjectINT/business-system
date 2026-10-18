@@ -30,6 +30,16 @@ export const ACTION_LABEL: Record<Action, string> = {
   info: "for information",
 };
 
+/** A rule's badge takes the colour of the status its action gives the row. */
+export const ACTION_COLOR: Record<Action, ChipColor> = {
+  duplicate: "default",
+  exclude: "danger",
+  decide: "accent",
+  hold: "accent",
+  review: "warning",
+  info: "default",
+};
+
 export const RECONCILIATION_META: Record<ReconciliationStatus, { label: string; color: ChipColor; description: string }> = {
   matched: { label: "Matched", color: "success", description: "Received equals the expected payout" },
   underpaid: { label: "Underpaid", color: "warning", description: "Due, part of the payout received" },

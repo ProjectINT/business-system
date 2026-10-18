@@ -263,6 +263,9 @@ class CalcError extends Error {
 interface ReservationCalc {
   reservationId: string;
   propertyId: string;
+  checkIn: CalendarDate;
+  checkOut: CalendarDate;
+  channel: 'OTA' | 'Direct';      // для OTA fees по каналам
   dqStatus: DqStatus;
   nights: number;
   active: boolean;                 // confirmed | modified
@@ -322,7 +325,7 @@ interface Scope {
 
 | Функция | Результат | Правило отнесения к периоду |
 |---|---|---|
-| `calculateAccruals(calcs, expenses, scope)` | Gross bookings, возвраты, OTA fees, чистая выручка аренды, Management fees, опер. расходы, ночи, отмены справочно | строки ночей с `date` в периоде; расходы по `expense_date`, `paid` + `pending` |
+| `calculateAccruals(calcs, expenses, scope)` | Gross bookings, возвраты, OTA fees и они же по каналу брони (`otaFeeByChannel`: OTA и Direct, у Direct — маркетинговое отчисление; в сумме = OTA fees), чистая выручка аренды, Management fees, опер. расходы, ночи, отмены справочно | строки ночей с `date` в периоде; расходы по `expense_date`, `paid` + `pending` |
 | `calculateCashFlow(payments, expenses, scope)` | поступления, оплаченные расходы, чистый денежный поток | платежи по `payment_date`; расходы `paid` по `expense_date` |
 | `reconcileReservation(calc, payments, asOf, policies)` | ожидалось, получено, разница, статус | платежи брони любой датой; срок — по политике `paymentDue` |
 | `reconcile(calcs, payments, scope, policies)` | строки сверки и итоги | бронь по политике `reconciliationDate` (раздел 7) |

@@ -8,7 +8,10 @@ import type { Status } from "@/lib/dq";
 import type { RawRow, RawTable, RuleInfo } from "@/lib/data";
 import { FLAGGED, RAW_PARAM } from "@/lib/data/query";
 import { count } from "@/lib/format";
-import { ACTION_LABEL, STATUS_META, STATUS_ORDER } from "@/components/status-meta";
+import { RuleBadges } from "@/components/rules/rule-badge";
+import { RuleLegendButton } from "@/components/rules/rule-legend";
+import { ruleSearchText } from "@/components/rules/rule-meta";
+import { STATUS_META, STATUS_ORDER } from "@/components/status-meta";
 
 const ENTITY_LABEL: Record<RawTable["entity"], string> = {
   property: "Properties",
@@ -61,7 +64,7 @@ export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[
     const keep = (r: RawRow) =>
       (villa === ALL || r.propertyId === villa) &&
       (status === ALL || (status === FLAGGED ? isFlagged(r.status) : r.status === status)) &&
-      (q === "" || `${r.cells.join(" ")} ${r.failed.map((f) => f.ruleId).join(" ")}`.toLowerCase().includes(q));
+      (q === "" || `${r.cells.join(" ")} ${r.failed.map((f) => ruleSearchText(f.ruleId)).join(" ")}`.toLowerCase().includes(q));
     return new Map(tables.map((t) => [t.entity, t.rows.filter(keep)]));
   }, [tables, villa, status, query]);
   const rowsOf = (t: RawTable) => filtered.get(t.entity) ?? [];
@@ -136,10 +139,13 @@ export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[
           <SearchField aria-label="Search rows" className="w-64" value={query} onChange={setQuery}>
             <SearchField.Group>
               <SearchField.SearchIcon />
-              <SearchField.Input placeholder="Search id, villa, rule…" />
+              <SearchField.Input placeholder="Search id, villa, issue…" />
               <SearchField.ClearButton />
             </SearchField.Group>
           </SearchField>
+          <div className="ms-auto">
+            <RuleLegendButton ruleOf={ruleOf} />
+          </div>
         </div>
 
         <Tabs variant="secondary" defaultSelectedKey={firstTab}>
@@ -157,7 +163,7 @@ export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[
 
           {ordered.map((t) => (
             <Tabs.Panel key={t.entity} id={t.entity} className="flex flex-col gap-3 pt-4">
-              <EntityTable table={t} rows={rowsOf(t)} ruleOf={ruleOf} />
+              <EntityTable table={t} rows={rowsOf(t)} />
             </Tabs.Panel>
           ))}
         </Tabs>
@@ -166,7 +172,7 @@ export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[
   );
 }
 
-function EntityTable({ table, rows, ruleOf }: { table: RawTable; rows: RawRow[]; ruleOf: Map<string, RuleInfo> }) {
+function EntityTable({ table, rows }: { table: RawTable; rows: RawRow[] }) {
   return (
     <>
       <Table variant="secondary">
@@ -180,7 +186,7 @@ function EntityTable({ table, rows, ruleOf }: { table: RawTable; rows: RawRow[];
                 </Table.Column>
               ))}
               <Table.Column>Status</Table.Column>
-              <Table.Column>Rules</Table.Column>
+              <Table.Column>Issues</Table.Column>
             </Table.Header>
             <Table.Body
               renderEmptyState={() => <div className="py-8 text-center text-sm text-muted">No rows match the filters</div>}
@@ -211,21 +217,7 @@ function EntityTable({ table, rows, ruleOf }: { table: RawTable; rows: RawRow[];
                     </Tooltip>
                   </Table.Cell>
                   <Table.Cell>
-                    <div className="flex flex-wrap gap-1">
-                      {row.failed.length === 0 && <span className="text-muted">—</span>}
-                      {row.failed.map((f) => (
-                        <Tooltip key={f.ruleId} delay={200}>
-                          <Tooltip.Trigger>
-                            <Chip size="sm" variant="secondary" className="cursor-help font-mono">
-                              {f.ruleId}
-                            </Chip>
-                          </Tooltip.Trigger>
-                          <Tooltip.Content>
-                            {ruleOf.get(f.ruleId)?.title ?? f.ruleId}: {ACTION_LABEL[f.action]}
-                          </Tooltip.Content>
-                        </Tooltip>
-                      ))}
-                    </div>
+                    <RuleBadges rules={row.failed.map((f) => ({ id: f.ruleId, action: f.action }))} />
                   </Table.Cell>
                 </Table.Row>
               ))}

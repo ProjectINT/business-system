@@ -34,8 +34,8 @@ export function OutsideFigures({ groups, keys }: { groups: View<OutsideGroup>[];
         {keys.slice(0, 8).join(", ")}
         {keys.length > 8 ? ` … ${keys.length - 8} more` : ""}
       </span>
-      <Link href="/raw-data" className="ms-auto text-sm">
-        Source rows
+      <Link href="/data-quality" className="ms-auto text-sm">
+        Why
         <Link.Icon />
       </Link>
     </Card>

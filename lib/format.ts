@@ -1,4 +1,5 @@
-// All amounts are whole IDR. bigint comes from lib/calc and is formatted without loss of precision.
+// Amounts are whole IDR unless a Money says otherwise. bigint comes from lib/calc and is formatted without loss of precision.
+import { toDecimalString, type Money } from "@/lib/calc";
 
 const compact = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -31,4 +32,15 @@ export function count(value: number | bigint): string {
 export function signedPercent(value: number): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(1)}%`;
+}
+
+/** Exact, digits grouped, no code: "13,681,939" in IDR, "4,280,874.00" in USD. */
+export function moneyDigits(m: Money): string {
+  const [whole = "0", fraction] = toDecimalString(m).split(".");
+  return `${full.format(BigInt(whole))}${fraction === undefined ? "" : `.${fraction}`}`;
+}
+
+/** "13,681,939" for IDR (tables name it in the header), "USD 4,280,874.00" for another currency. */
+export function moneyFull(m: Money): string {
+  return m.currency === "IDR" ? moneyDigits(m) : `${m.currency} ${moneyDigits(m)}`;
 }

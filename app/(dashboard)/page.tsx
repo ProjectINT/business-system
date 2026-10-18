@@ -9,7 +9,7 @@ import { OutsideFigures } from "@/components/dashboard/outside-figures";
 import { PageSkeleton } from "@/components/dashboard/page-skeleton";
 import { PropertyTable } from "@/components/dashboard/property-table";
 import { toView } from "@/lib/calc";
-import { dashboardOf, dataSource, filterOptionsOf, parseFilters, searchOf } from "@/lib/data";
+import { dashboardOf, dataSource, filterOptionsOf, parseFilters, qualityOf, searchOf } from "@/lib/data";
 
 // Filters come from the URL, so the figures render per request behind a Suspense boundary;
 // loading and the checks run once per process (lib/data/csv-source.ts).
@@ -25,6 +25,7 @@ async function Overview({ searchParams }: Pick<PageProps<"/">, "searchParams">) 
   const snapshot = await dataSource().snapshot();
   const { filters, warnings } = parseFilters(await searchParams, snapshot);
   const d = dashboardOf(snapshot, filters);
+  const quality = qualityOf(snapshot);
   const query = searchOf(filters, snapshot.range);
   const state = {
     from: filters.from,
@@ -63,10 +64,13 @@ async function Overview({ searchParams }: Pick<PageProps<"/">, "searchParams">) 
           <GbvChart data={gbv} includeReview={filters.includeReview} />
         </div>
         <DataQualityCard
-          counts={snapshot.report.summary.counts}
-          files={Object.keys(snapshot.dataset.files).length}
+          counts={quality.counts}
+          files={quality.files.length}
           runStatus={snapshot.report.status}
           sourceLabel={snapshot.source.label}
+          cases={quality.caseCount}
+          excluded={quality.excluded.length}
+          balanced={quality.files.every((f) => f.balanced)}
         />
       </div>
       <PropertyTable rows={toView(d.properties)} totals={toView(d.totals)} />

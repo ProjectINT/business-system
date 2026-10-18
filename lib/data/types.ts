@@ -2,7 +2,7 @@
 // run over them and the calculator input built from both. Pages ask the snapshot for figures under
 // filters; neither the checks nor the calculator know where the rows came from.
 import type { CalcPolicies, CalendarDate, Money, OverviewInput, Period } from "../calc";
-import type { Action, Dataset, RowEntity, RuleId, RunReport, Status } from "../dq";
+import type { Action, Dataset, Entity, RowEntity, RuleId, RunReport, Status } from "../dq";
 
 export interface PropertyInfo {
   readonly propertyId: string;
@@ -15,6 +15,9 @@ export interface RuleInfo {
   readonly id: RuleId;
   readonly title: string;
   readonly action: Action;
+  /** The rule's area: source entities, or `file` (DQ-90). */
+  readonly entities: readonly Entity[];
+  readonly engine: "ts" | "sql";
 }
 
 export interface FailedRule {

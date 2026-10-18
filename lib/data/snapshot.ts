@@ -2,7 +2,7 @@
 // properties and clusters for the filters, the data range, every row with its status, the calculator input.
 import { parseDate, period, type CalcPolicies, type CalendarDate, type Money } from "../calc";
 import { ENTITIES } from "../ingest";
-import type { Check, Dataset, JournalResult, RowEntity, RunReport, Verdict } from "../dq";
+import { entitiesOf, type Check, type Dataset, type JournalResult, type RowEntity, type RunReport, type Verdict } from "../dq";
 import { admit, calcStatus, toMoney } from "./admit";
 import type { FailedRule, PropertyInfo, RecordInfo, RuleInfo, Snapshot, SourceInfo } from "./types";
 
@@ -115,7 +115,7 @@ export function buildSnapshot(parts: SnapshotParts): Snapshot {
   const rules: RuleInfo[] = checks
     .filter((c) => ruleOrder.has(c.id))
     .sort((a, b) => ruleOrder.get(a.id)! - ruleOrder.get(b.id)!)
-    .map((c) => ({ id: c.id, title: c.title, action: c.action }));
+    .map((c) => ({ id: c.id, title: c.title, action: c.action, entities: entitiesOf(c), engine: c.engine }));
 
   const { input, failures } = admit(dataset, report.verdicts);
   return {

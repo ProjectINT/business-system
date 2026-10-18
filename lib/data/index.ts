@@ -29,6 +29,21 @@ export {
   type SearchParams,
 } from "./filters";
 export { PARAM, searchOf, type DateRange, type FilterOptions, type FilterState } from "./query";
+export {
+  IN_FIGURES,
+  qualityOf,
+  type AmountTotals,
+  type CaseOverlap,
+  type CaseRow,
+  type CaseView,
+  type ExcludedRow,
+  type FileTotals,
+  type Issue,
+  type Quality,
+  type RecordCheck,
+  type RuleSummary,
+  type VillaCases,
+} from "./quality";
 export { rawTablesOf, type RawRow, type RawTable } from "./raw";
 export { reconciliationOf, type ReconciliationRow, type ReconciliationView, type UnallocatedPayment } from "./reconciliation";
 export { buildSnapshot, type SnapshotParts } from "./snapshot";

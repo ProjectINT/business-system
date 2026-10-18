@@ -76,10 +76,18 @@ describe("buildSnapshot", () => {
     expect((await snapshotOf({}, "2026-10-15")).range).toEqual({ from: "2026-10-15", to: "2026-10-15" });
   });
 
-  it("rules of the run in run order, with title and action", async () => {
+  it("rules of the run in run order, with title, action, area and engine", async () => {
     const s = await snapshotOf({});
     expect(s.rules.map((r) => r.id)).toEqual(defaultRegistry().checks.map((c) => c.id));
-    expect(s.rules[0]).toEqual({ id: "DQ-03", title: "Schema and format", action: "exclude" });
+    expect(s.rules[0]).toEqual({
+      id: "DQ-03",
+      title: "Schema and format",
+      action: "exclude",
+      entities: ["property", "commission_rule", "reservation", "payment", "expense"],
+      engine: "ts",
+    });
+    expect(s.rules.find((r) => r.id === "DQ-12")).toMatchObject({ entities: ["reservation"], engine: "sql" });
+    expect(s.rules.at(-1)).toMatchObject({ id: "DQ-90", entities: ["file"] });
   });
 
   it("refuses a report whose rules or rows it cannot place", async () => {

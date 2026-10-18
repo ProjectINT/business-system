@@ -19,9 +19,13 @@ interface Props {
   files: number;
   runStatus: "succeeded" | "failed";
   sourceLabel: string;
+  /** Cases a human will decide, rows the checks excluded or dropped, and whether every file adds up. */
+  cases: number;
+  excluded: number;
+  balanced: boolean;
 }
 
-export function DataQualityCard({ counts, files, runStatus, sourceLabel }: Props) {
+export function DataQualityCard({ counts, files, runStatus, sourceLabel, cases, excluded, balanced }: Props) {
   const total = STATUS_ORDER.reduce((n, s) => n + counts[s], 0);
   const shown = STATUS_ORDER.filter((s) => counts[s] > 0 || s !== "superseded");
 
@@ -67,16 +71,26 @@ export function DataQualityCard({ counts, files, runStatus, sourceLabel }: Props
             </li>
           ))}
         </ul>
+
+        <p className="text-xs text-muted">
+          {count(cases)} cases await a decision · {count(excluded)} rows excluded automatically ·{" "}
+          {balanced ? "control totals add up" : "control totals differ"}
+        </p>
       </Card.Content>
 
       <Card.Footer className="mt-auto flex items-center justify-between gap-2 text-sm">
         <Chip size="sm" variant="soft">
           CSV · {sourceLabel}
         </Chip>
-        <Link href="/raw-data" className="text-sm">
-          Source rows
-          <Link.Icon />
-        </Link>
+        <div className="flex gap-4">
+          <Link href="/raw-data" className="text-sm">
+            Source rows
+          </Link>
+          <Link href="/data-quality" className="text-sm">
+            Data quality
+            <Link.Icon />
+          </Link>
+        </div>
       </Card.Footer>
     </Card>
   );

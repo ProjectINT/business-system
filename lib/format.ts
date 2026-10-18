@@ -1,4 +1,4 @@
-// All amounts are whole IDR.
+// All amounts are whole IDR. bigint comes from lib/calc and is formatted without loss of precision.
 
 const compact = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -8,16 +8,16 @@ const compact = new Intl.NumberFormat("en-US", {
 const full = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
 /** "IDR 1.3B" — for KPI tiles and chart axes. */
-export function idrCompact(value: number): string {
+export function idrCompact(value: number | bigint): string {
   return `IDR ${compact.format(value)}`;
 }
 
 /** "1,252,752,856" — for table cells. */
-export function idrFull(value: number): string {
+export function idrFull(value: number | bigint): string {
   return full.format(value);
 }
 
-export function count(value: number): string {
+export function count(value: number | bigint): string {
   return full.format(value);
 }
 

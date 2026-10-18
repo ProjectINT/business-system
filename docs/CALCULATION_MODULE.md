@@ -2,6 +2,8 @@
 
 Статус: черновик v1 от 2026-10-18. Модуль реализует финансовую методологию из раздела 7 PLAN.md: что считаем, определяет PLAN.md, а этот документ — как считаем. Если в арифметике (типы, округление, распределение, ошибки) документы расходятся, действует этот. Список расхождений приведён в разделе 13.
 
+**Порядок выполнения** — в [ROADMAP.md](ROADMAP.md): единый пофазный план по всем четырём документам; таблица этапов ниже сохранена как справка.
+
 ## 1. Требования
 
 1. **Отдельный модуль** `lib/calc/`: только чистые функции. Нет ввода-вывода, базы, React, Next.js, текущего времени и глобального состояния. Модуль не знает, откуда пришли данные: из CSV или из Supabase.
@@ -378,7 +380,7 @@ export const DEFAULT_POLICIES: CalcPolicies = Object.freeze({ ... });
 
 **TypeScript.**
 - `tsconfig.json`: `target` повышается с `ES2017` до `ES2022`. Сейчас литерал `10n` не компилируется: `TS2737: BigInt literals are not available when targeting lower than ES2020`. Node 24 и SWC в Next.js поддерживают ES2022.
-- `tsconfig.calc.json` расширяет основной и для `lib/calc/**` включает `noUncheckedIndexedAccess` (в распределении `parts[i]` может быть `undefined`), `noImplicitReturns`, `noFallthroughCasesInSwitch`, `exactOptionalPropertyTypes`. Проверка — `npm run typecheck:calc`. Для всего проекта эти флаги включим позже, когда поправим UI-код.
+- `tsconfig.lib.json` расширяет основной и для `lib/calc/**` включает `noUncheckedIndexedAccess` (в распределении `parts[i]` может быть `undefined`), `noImplicitReturns`, `noFallthroughCasesInSwitch`, `exactOptionalPropertyTypes`. Проверка — `npm run typecheck:lib`. Для всего проекта эти флаги включим позже, когда поправим UI-код.
 
 **ESLint** (блок в `eslint.config.mjs` для `lib/calc/**/*.ts`, кроме `*.test.ts`):
 
@@ -445,7 +447,7 @@ lib/calc/
 - `vitest.config.ts`: порог покрытия для `lib/calc/**` — 100% строк, ветвей и функций. Ниже порога CI падает.
 - Команды:
   - `npm test` — все тесты;
-  - `npm run test:calc` — тесты модуля с покрытием и проверка типов `tsconfig.calc.json`;
+  - `npm run test:lib` — тесты модуля (вместе с `lib/ingest`) с покрытием и проверка типов `tsconfig.lib.json`;
   - `npm run test:calc:tz` — те же тесты при `TZ=Pacific/Kiritimati` (UTC+14) и `TZ=America/Los_Angeles` (UTC−7/−8, переход времени 01.11.2026). Часовой пояс задаётся до запуска процесса, поэтому это отдельные прогоны.
 - Входные фикстуры глубоко заморожены (`deepFreeze`). Модули ES работают в strict mode, поэтому любая попытка изменить вход бросает исключение, и тест падает.
 
@@ -642,7 +644,7 @@ Stryker с vitest-runner на `lib/calc`, цель — не меньше 95% у�
 
 | # | Этап | Оценка | Факт |
 |---|---|---|---|
-| 0 | `target: ES2022`, `tsconfig.calc.json`, vitest + coverage + fast-check, правила ESLint | 20 мин | |
+| 0 | `target: ES2022`, `tsconfig.lib.json`, vitest + coverage + fast-check, правила ESLint | 20 мин | |
 | 1 | Примитивы: ошибки, деньги, ставки, округление, распределение, календарь; тесты и свойства | 60 мин | |
 | 2 | Комиссия, `calculateReservation`, политики, пакетный расчёт с отказами; тесты | 40 мин | |
 | 3 | Начисления, деньги, сверка, owner balance, сводка по объектам и портфелю; тесты | 50 мин | |

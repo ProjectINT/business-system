@@ -1,4 +1,4 @@
-// Source rows as received (page /raw-data): every cell as text under the file's own header, with the
+// Source rows as received (page /import/raw-data): every cell as text under the file's own header, with the
 // status the checks gave the row and the rules that failed on it. Nothing is corrected.
 import { ENTITIES } from "../ingest";
 import type { RowEntity, Status } from "../dq";
@@ -8,6 +8,8 @@ export interface RawRow {
   readonly unitId: string;
   readonly lineNo: number;
   readonly recordKey: string | null;
+  /** The villa the row names, as the checks read it; `null` when it names none. */
+  readonly propertyId: string | null;
   /** Cells in header order; "" where the row has no value. */
   readonly cells: readonly string[];
   readonly status: Status;
@@ -31,6 +33,7 @@ export function rawTablesOf(snapshot: Snapshot): RawTable[] {
         unitId: row.unitId,
         lineNo: row.lineNo,
         recordKey: row.recordKey,
+        propertyId: record.propertyId,
         cells: file.header.map((column) => row.raw[column] ?? ""),
         status: record.status,
         failed: record.failed,

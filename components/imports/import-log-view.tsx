@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, Chip, Description, Label, Link, ListBox, Table } from "@heroui/react";
+import { Button, Card, Chip, Description, Label, ListBox, Table } from "@heroui/react";
 import {
   ArrowRotateRight,
   CircleCheck,
@@ -36,21 +36,15 @@ export function ImportLogView({ batches }: { batches: ImportBatch[] }) {
   const batch = batches.find((b) => b.id === selectedId) ?? batches[0];
 
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <Link href="/raw-data" className="w-fit text-sm text-muted">
-            ← Raw data
-          </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Import data logs</h1>
-            <Chip size="sm" variant="soft" color="warning">
-              Demo data
-            </Chip>
-          </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <p className="text-sm text-muted">
-            How data entered the system: which modules ran, what they changed and why.
+            Import batches: which modules ran, what they changed and why.
           </p>
+          <Chip size="sm" variant="soft" color="warning">
+            Demo data
+          </Chip>
         </div>
         <Button variant="secondary">
           <ArrowRotateRight />

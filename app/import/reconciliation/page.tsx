@@ -18,23 +18,20 @@ function amountText(m: Money | null): string | null {
   return m.currency === "IDR" ? idrFull(m.amount) : `${m.currency} ${toDecimalString(m)}`;
 }
 
-export default function ReconciliationPage({ searchParams }: PageProps<"/reconciliation">) {
+export default function ReconciliationPage({ searchParams }: PageProps<"/import/reconciliation">) {
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Reconciliation</h1>
-        <p className="text-sm text-muted">
-          Expected payout (gross − OTA fee − refund) against payments received, per reservation · amounts in IDR
-        </p>
-      </div>
+    <>
+      <p className="text-sm text-muted">
+        Expected payout (gross − OTA fee − refund) against payments received, per reservation · amounts in IDR
+      </p>
       <Suspense fallback={<PageSkeleton />}>
         <Reconciliation searchParams={searchParams} />
       </Suspense>
-    </div>
+    </>
   );
 }
 
-async function Reconciliation({ searchParams }: Pick<PageProps<"/reconciliation">, "searchParams">) {
+async function Reconciliation({ searchParams }: Pick<PageProps<"/import/reconciliation">, "searchParams">) {
   const snapshot = await dataSource().snapshot();
   const { filters, warnings } = parseFilters(await searchParams, snapshot);
   const r = reconciliationOf(snapshot, filters);

@@ -2,10 +2,11 @@
 
 // Figures by villa from clean records only, whatever the filter bar says: records under review are
 // never mixed into a cell. The switch shows, under each figure, the part they would bring.
-import { Chip, SearchField, Switch, Table, Tooltip, type SortDescriptor } from "@heroui/react";
+import { Chip, Link, SearchField, Switch, Table, Tooltip, type SortDescriptor } from "@heroui/react";
 import { useMemo, useState } from "react";
 import type { View } from "@/lib/calc";
 import type { Dashboard, PropertyRow } from "@/lib/data";
+import { flaggedRowsHref } from "@/lib/data/query";
 import { count, idrFull, signedFull } from "@/lib/format";
 
 type Row = View<PropertyRow>;
@@ -121,7 +122,7 @@ export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dash
                   <Table.SortableColumnHeader
                     sortDirection={sortDirection}
                     className="justify-end"
-                    title="Source rows of the villa under review or awaiting a decision, whole data set"
+                    title="Source rows of the villa under review or awaiting a decision, whole data set; click a number to see them"
                   >
                     DQ flags
                   </Table.SortableColumnHeader>
@@ -153,12 +154,13 @@ export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dash
                   <Table.Cell className="text-end">
                     {r.flags > 0 ? (
                       <Tooltip delay={200}>
-                        <Tooltip.Trigger>
-                          <Chip size="sm" variant="soft" color="warning" className="cursor-help">
+                        {/* The link is the trigger itself: a link inside Tooltip.Trigger (role="button") would nest controls. */}
+                        <Link href={flaggedRowsHref(r.propertyId)} className="no-underline">
+                          <Chip size="sm" variant="soft" color="warning" className="cursor-pointer">
                             {r.flags}
                           </Chip>
-                        </Tooltip.Trigger>
-                        <Tooltip.Content>Rows under review or awaiting a decision</Tooltip.Content>
+                        </Link>
+                        <Tooltip.Content>Rows under review or awaiting a decision · open in Import › Raw data</Tooltip.Content>
                       </Tooltip>
                     ) : (
                       <span className="text-muted">—</span>

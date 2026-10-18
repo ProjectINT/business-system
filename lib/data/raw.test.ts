@@ -43,6 +43,7 @@ describe("rawTablesOf", () => {
       unitId: "reservations.csv:2",
       lineNo: 2,
       recordKey: "R0001",
+      propertyId: "V001",
       cells: ["2026-09-01", "R0001", "V001", "2026-09-10", "2026-09-13", "confirmed", "3000000", "IDR", "450000", "0", "vip"],
       status: "excluded", // `channel` is missing: DQ-03
       failed: [{ ruleId: "DQ-03", action: "exclude" }],

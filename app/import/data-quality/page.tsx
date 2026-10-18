@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Data quality — Villa Portfolio",
 };
 
-// No filters: the page shows the whole run, so it renders once, like /raw-data.
+// No filters: the page shows the whole run, so it renders once, like /import/raw-data.
 export default async function DataQualityPage() {
   const snapshot = await dataSource().snapshot();
   const model = dataQualityOf(snapshot);
@@ -21,16 +21,11 @@ export default async function DataQualityPage() {
     underReview: toView(p.underReview.gross),
   }));
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Data quality</h1>
-        <p className="text-sm text-muted">
-          Every source row after {model.rules.filter((r) => !r.entities.includes("file")).length} rules and the control totals ·
-          as of {model.asOf}
-          {model.asOfDefaulted && " (largest updated_at)"} · CSV · {model.sourceLabel}
-        </p>
-      </div>
+    <>
+      <p className="text-sm text-muted">
+        Every source row after {model.rules.filter((r) => !r.entities.includes("file")).length} rules and the control totals
+      </p>
       <DataQualityView model={model} gbv={gbv} />
-    </div>
+    </>
   );
 }

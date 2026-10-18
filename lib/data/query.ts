@@ -36,6 +36,18 @@ export interface FilterOptions {
   readonly clusters: readonly string[];
 }
 
+// Rows on /import/raw-data, same plain strings:
+//   ?property=V001      rows that name the villa; absent — every row
+//   &status=flagged     a row status, or `flagged`: review and pending, what the dashboard counts as DQ flags
+export const RAW_PARAM = { property: PARAM.property, status: "status" } as const;
+export const FLAGGED = "flagged";
+
+/** The villa's DQ flags on /import/raw-data. */
+export function flaggedRowsHref(propertyId: string): string {
+  const q = new URLSearchParams({ [RAW_PARAM.property]: propertyId, [RAW_PARAM.status]: FLAGGED });
+  return `/import/raw-data?${q}`;
+}
+
 /** `?…` with the filters that differ from the defaults; "" when none do. */
 export function searchOf(state: FilterState, range: DateRange): string {
   const q = new URLSearchParams();

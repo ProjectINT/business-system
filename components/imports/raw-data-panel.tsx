@@ -2,9 +2,11 @@
 
 import { Card, Chip, Label, ListBox, SearchField, Select, Table, Tabs, Tooltip, type Key } from "@heroui/react";
 import { FileText } from "@gravity-ui/icons";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { Status } from "@/lib/dq";
-import type { RawTable, RuleInfo } from "@/lib/data";
+import type { RawRow, RawTable, RuleInfo } from "@/lib/data";
+import { FLAGGED, RAW_PARAM } from "@/lib/data/query";
 import { count } from "@/lib/format";
 import { ACTION_LABEL, STATUS_META, STATUS_ORDER } from "@/components/status-meta";
 
@@ -20,15 +22,51 @@ const NUMERIC = new Set(["gross_booking_value", "ota_fee", "refund_amount", "amo
 
 const ALL = "all";
 
+type StatusFilter = Status | typeof FLAGGED | typeof ALL;
+
+/** What the dashboard counts as DQ flags: rows under review or awaiting a decision. */
+const isFlagged = (s: Status) => s === "review" || s === "pending";
+
 /** Money files first: that is where the checks find most. */
 const TAB_ORDER: readonly RawTable["entity"][] = ["reservation", "payment", "expense", "property", "commission_rule"];
 
 export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[]; rules: RuleInfo[]; sourceLabel: string }) {
-  const [status, setStatus] = useState<Status | typeof ALL>(ALL);
+  const params = useSearchParams();
+  const pathname = usePathname();
   const [query, setQuery] = useState("");
   const ruleOf = useMemo(() => new Map(rules.map((r) => [r.id, r])), [rules]);
-  const present = STATUS_ORDER.filter((s) => tables.some((t) => t.rows.some((r) => r.status === s)));
+  const present = useMemo(() => STATUS_ORDER.filter((s) => tables.some((t) => t.rows.some((r) => r.status === s))), [tables]);
   const ordered = TAB_ORDER.map((e) => tables.find((t) => t.entity === e)).filter((t) => t !== undefined);
+  const villas = useMemo(
+    () => [...new Set(tables.flatMap((t) => t.rows.flatMap((r) => (r.propertyId === null ? [] : [r.propertyId]))))].sort(),
+    [tables],
+  );
+
+  // Villa and status live in the URL: the dashboard's DQ flags link here with them. Unknown values show everything.
+  const statusParam = params.get(RAW_PARAM.status);
+  const status: StatusFilter =
+    statusParam === FLAGGED || present.includes(statusParam as Status) ? (statusParam as StatusFilter) : ALL;
+  const villaParam = params.get(RAW_PARAM.property);
+  const villa = villaParam !== null && villas.includes(villaParam) ? villaParam : ALL;
+  const setParam = (name: string, value: string) => {
+    const next = new URLSearchParams(params);
+    if (value === ALL) next.delete(name);
+    else next.set(name, value);
+    const s = next.toString();
+    window.history.replaceState(null, "", s === "" ? pathname : `${pathname}?${s}`);
+  };
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const keep = (r: RawRow) =>
+      (villa === ALL || r.propertyId === villa) &&
+      (status === ALL || (status === FLAGGED ? isFlagged(r.status) : r.status === status)) &&
+      (q === "" || `${r.cells.join(" ")} ${r.failed.map((f) => f.ruleId).join(" ")}`.toLowerCase().includes(q));
+    return new Map(tables.map((t) => [t.entity, t.rows.filter(keep)]));
+  }, [tables, villa, status, query]);
+  const rowsOf = (t: RawTable) => filtered.get(t.entity) ?? [];
+  // Opened from a link with filters: the first file that has rows.
+  const firstTab = (ordered.find((t) => rowsOf(t).length > 0) ?? ordered[0])?.entity;
 
   return (
     <Card className="gap-5">
@@ -47,7 +85,28 @@ export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[
 
       <Card.Content className="gap-4">
         <div className="flex flex-wrap items-end gap-3">
-          <Select className="w-48" value={status} onChange={(k: Key | null) => setStatus((k ?? ALL) as Status | typeof ALL)}>
+          <Select className="w-40" value={villa} onChange={(k: Key | null) => setParam(RAW_PARAM.property, String(k ?? ALL))}>
+            <Label className="text-xs text-muted">Villa</Label>
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                <ListBox.Item id={ALL} textValue="All villas">
+                  All villas
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+                {villas.map((v) => (
+                  <ListBox.Item key={v} id={v} textValue={v}>
+                    {v}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            </Select.Popover>
+          </Select>
+          <Select className="w-48" value={status} onChange={(k: Key | null) => setParam(RAW_PARAM.status, String(k ?? ALL))}>
             <Label className="text-xs text-muted">Status</Label>
             <Select.Trigger>
               <Select.Value />
@@ -59,6 +118,12 @@ export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[
                   All statuses
                   <ListBox.ItemIndicator />
                 </ListBox.Item>
+                {present.some(isFlagged) && (
+                  <ListBox.Item id={FLAGGED} textValue="Review + pending">
+                    Review + pending
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                )}
                 {present.map((s) => (
                   <ListBox.Item key={s} id={s} textValue={STATUS_META[s].label}>
                     {STATUS_META[s].label}
@@ -77,13 +142,13 @@ export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[
           </SearchField>
         </div>
 
-        <Tabs variant="secondary" defaultSelectedKey={ordered[0]?.entity}>
+        <Tabs variant="secondary" defaultSelectedKey={firstTab}>
           <Tabs.ListContainer>
             <Tabs.List aria-label="Source files" className="w-fit min-w-0">
               {ordered.map((t) => (
                 <Tabs.Tab key={t.entity} id={t.entity} className="gap-2 whitespace-nowrap">
                   {ENTITY_LABEL[t.entity]}
-                  <span className="text-xs text-muted tabular-nums">{count(t.rows.length)}</span>
+                  <span className="text-xs text-muted tabular-nums">{count(rowsOf(t).length)}</span>
                   <Tabs.Indicator />
                 </Tabs.Tab>
               ))}
@@ -92,7 +157,7 @@ export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[
 
           {ordered.map((t) => (
             <Tabs.Panel key={t.entity} id={t.entity} className="flex flex-col gap-3 pt-4">
-              <EntityTable table={t} status={status} query={query} ruleOf={ruleOf} />
+              <EntityTable table={t} rows={rowsOf(t)} ruleOf={ruleOf} />
             </Tabs.Panel>
           ))}
         </Tabs>
@@ -101,26 +166,7 @@ export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[
   );
 }
 
-function EntityTable({
-  table,
-  status,
-  query,
-  ruleOf,
-}: {
-  table: RawTable;
-  status: Status | typeof ALL;
-  query: string;
-  ruleOf: Map<string, RuleInfo>;
-}) {
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return table.rows.filter(
-      (r) =>
-        (status === ALL || r.status === status) &&
-        (q === "" || `${r.cells.join(" ")} ${r.failed.map((f) => f.ruleId).join(" ")}`.toLowerCase().includes(q)),
-    );
-  }, [table, status, query]);
-
+function EntityTable({ table, rows, ruleOf }: { table: RawTable; rows: RawRow[]; ruleOf: Map<string, RuleInfo> }) {
   return (
     <>
       <Table variant="secondary">

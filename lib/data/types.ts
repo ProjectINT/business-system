@@ -26,7 +26,7 @@ export interface FailedRule {
   readonly action: Action;
 }
 
-/** A source row with its final status: for /raw-data, the amounts outside the figures and the flags. */
+/** A source row with its final status: for /import/raw-data, the amounts outside the figures and the flags. */
 export interface RecordInfo {
   readonly unitId: string;
   readonly entity: RowEntity;

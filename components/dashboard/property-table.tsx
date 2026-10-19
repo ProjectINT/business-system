@@ -3,13 +3,14 @@
 // Figures by villa from clean records only, whatever the filter bar says: records under review are
 // never mixed into a cell. The switch shows, under each figure, the part they would bring. Hovering a
 // figure, or that part, lists the records it is made of.
-import { Chip, Link, SearchField, Switch, Table, Tooltip, type SortDescriptor } from "@heroui/react";
+import { Chip, Link, Switch, Table, Tooltip, type SortDescriptor } from "@heroui/react";
 import { useMemo, useState } from "react";
 import type { View } from "@/lib/calc";
 import type { Dashboard, PropertyRow } from "@/lib/data";
 import { flaggedRowsHref } from "@/lib/data/query";
 import { count, idrFull, signedFull } from "@/lib/format";
 import { FigureWithSources } from "./figure-sources";
+import { matchesVilla, VillaSearch } from "./villa-search";
 
 type Row = View<PropertyRow>;
 type NumericKey = "nights" | "gross" | "otaFee" | "managementFee" | "operatingExpenses" | "ownerBalance" | "received" | "difference";
@@ -77,15 +78,13 @@ function FigureCell({ row, column, shown }: { row: Row; column: (typeof COLUMNS)
 
 export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dashboard["totals"]> }) {
   const [query, setQuery] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
   const [sort, setSort] = useState<SortDescriptor>({ column: "gross", direction: "descending" });
   const [shown, setShown] = useState(false);
   const hasReview = rows.some((r) => COLUMNS.some((c) => r.underReview[c.id] !== 0));
 
   const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtered = q
-      ? rows.filter((r) => `${r.propertyId} ${r.name ?? ""} ${r.cluster ?? ""}`.toLowerCase().includes(q))
-      : rows;
+    const filtered = rows.filter((r) => (picked != null ? r.propertyId === picked : matchesVilla(r, query)));
     const key = sort.column as keyof Row;
     const dir = sort.direction === "descending" ? -1 : 1;
     return [...filtered].sort((a, b) => {
@@ -93,12 +92,13 @@ export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dash
       const y = b[key];
       return (typeof x === "number" && typeof y === "number" ? x - y : String(x ?? "").localeCompare(String(y ?? ""))) * dir;
     });
-  }, [rows, query, sort]);
+  }, [rows, query, picked, sort]);
 
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
+          <VillaSearch villas={rows} query={query} picked={picked} onQueryChange={setQuery} onPick={setPicked} />
           <h2 className="text-lg font-semibold">By villa</h2>
           <Chip size="sm" variant="soft">
             {visible.length}
@@ -107,25 +107,16 @@ export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dash
             Clean records{shown && hasReview ? " · under each figure, the part records under review bring" : ""}
           </span>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          {hasReview && (
-            <Switch size="sm" isSelected={shown} onChange={setShown}>
-              <Switch.Content className="text-sm text-muted">
-                <Switch.Control>
-                  <Switch.Thumb />
-                </Switch.Control>
-                Under review
-              </Switch.Content>
-            </Switch>
-          )}
-          <SearchField aria-label="Search villas" className="w-64" value={query} onChange={setQuery}>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input placeholder="Search villa or cluster…" />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
-        </div>
+        {hasReview && (
+          <Switch size="sm" isSelected={shown} onChange={setShown}>
+            <Switch.Content className="text-sm text-muted">
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+              Under review
+            </Switch.Content>
+          </Switch>
+        )}
       </div>
 
       <Table>

@@ -1,4 +1,4 @@
-// Server side: what deserves a banner above the figures (CALCULATION_MODULE.md 5 — a record the
+// Server side: what deserves a banner above the figures (CALCULATION_MODULE.md 4 — a record the
 // calculator refused is shown with its amount, never dropped silently).
 import type { CalcFailure } from "@/lib/calc";
 import type { DataFailure, Snapshot } from "@/lib/data";

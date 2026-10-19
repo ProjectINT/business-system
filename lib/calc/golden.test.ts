@@ -1,4 +1,4 @@
-// Golden test: V011, September 2026 (docs/CALCULATION_MODULE.md, 11.5).
+// Golden test: V011, September 2026 (docs/CALCULATION_MODULE.md, 10.5).
 // The numbers below were computed by hand from the source rows; they are not a snapshot.
 import { describe, expect, it } from "vitest";
 import { idr } from "./primitives/money";

@@ -1,4 +1,4 @@
-// Golden figures of the whole sample (CALCULATION_MODULE.md 11.6): the portfolio for September,
+// Golden figures of the whole sample (CALCULATION_MODULE.md 10.6): the portfolio for September,
 // October and the whole period, fixed in numbers. They depend on the DQ statuses, so a change in a
 // rule or in the calculator shows up here as a diff. Cross-checked once by an independent pass over
 // the raw CSV (plain BigInt, no lib/ code): nights, GBV, OTA (and its split by channel), MF, expenses, owner balance, cash — equal to the rupiah.

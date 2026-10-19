@@ -1,4 +1,4 @@
-// Invariants of the aggregates on random data (docs/CALCULATION_MODULE.md, 11.7).
+// Invariants of the aggregates on random data (docs/CALCULATION_MODULE.md, 10.7).
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { calculateAccruals } from "./accrual";

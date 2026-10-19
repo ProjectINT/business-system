@@ -5,7 +5,7 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // lib/calc, lib/ingest, lib/dq and lib/data: money is bigint, dates are calendar strings (docs/CALCULATION_MODULE.md, 9).
+  // lib/calc, lib/ingest, lib/dq and lib/data: money is bigint, dates are calendar strings (docs/CALCULATION_MODULE.md, 8).
   {
     files: ["lib/calc/**/*.ts", "lib/ingest/**/*.ts", "lib/dq/**/*.ts", "lib/data/**/*.ts"],
     ignores: [

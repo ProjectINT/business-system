@@ -86,7 +86,7 @@ interface CheckContext {
   units(entity: Entity): Unit[];      // действующий набор (раздел 2): строки пачки, pending прежних пачек, опубликованные; у строки origin и её пачка
   statusSoFar(unitId: string): Status;// статус после уже выполненных правил и решений человека
   decisions: Decisions;               // действующие решения по случаям (7.5): судьба брони, связь modified, перенос платежей
-  policies: CalcPolicies;             // из @/lib/calc (CALCULATION_MODULE.md, 7)
+  policies: CalcPolicies;             // из @/lib/calc (CALCULATION_MODULE.md, 6)
   db?: Sql;                           // есть только в режиме с базой
 }
 ```

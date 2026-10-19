@@ -28,7 +28,7 @@ describe("reconciliationOf", () => {
     expect(r.rows.map((l) => [l.reservationId, l.checkIn, l.status, l.received.amount, l.dqStatus, l.ruleIds, l.paymentIds])).toEqual([
       ["R0001", "2026-09-10", "matched", 2550000n, "clean", [], ["P0001"]],
       ["R0002", "2026-09-20", "underpaid", 1000000n, "review", ["DQ-16"], ["P0002"]],
-      ["R0003", "2026-10-20", "not_due", 0n, "clean", [], []],
+      ["R0003", "2026-10-20", "not_due", 0n, "clean", ["DQ-24"], []], // confirmed with no payment: a note, not a debt yet
     ]);
     expect(r.rows[0]).toMatchObject({ propertyId: "V001", checkOut: "2026-09-13", reservationStatus: "confirmed", expected: idr(2550000n) });
     expect(r.byStatus).toEqual({ matched: 1, not_received: 0, underpaid: 1, overpaid: 0, not_due: 1 });

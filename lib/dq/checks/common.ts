@@ -40,6 +40,7 @@ export const SKIP = {
   cancelled: "cancelled reservation",
   notCancelled: "not a cancellation",
   notModified: "status is not modified",
+  notConfirmed: "status is not confirmed",
   otaChannel: "channel is OTA",
   propertyUnknown: "property not found (DQ-04)",
   reservationUnknown: "reservation missing or excluded (DQ-05)",

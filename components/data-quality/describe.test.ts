@@ -16,7 +16,7 @@ function fails(report: RunReport) {
 group("describe", () => {
   it("words every problem of the sample files from its facts", async () => {
     const q = qualityOf(await sampleSnapshot());
-    expect(q.issues).toHaveLength(392);
+    expect(q.issues).toHaveLength(456);
     for (const i of q.issues) {
       const text = describe(i.ruleId, i.result);
       expect(text, `${i.ruleId} ${i.record.unitId}`).toBeTruthy();
@@ -33,6 +33,8 @@ group("describe", () => {
     expect(text("DQ-14", "P0051")).toBe("Paid 3,998,667 as GBV − OTA − refund gives, but more than GBV 3,898,667");
     expect(text("DQ-16", "R0017")).toBe("Nothing paid; 8,458,500 was due by check-in 2026-09-09");
     expect(text("DQ-23", "P0048")).toBe("Paid 2026-09-07, 1 day after check-in 2026-09-06, before check-out");
+    expect(text("DQ-24", "R0017")).toBe("Confirmed, but no payment on file · checked in 2026-09-09, 40 days ago");
+    expect(text("DQ-24", "R0035")).toBe("Confirmed, but no payment on file · check-in 2026-10-20, in 1 day");
   });
 
   it("words the rules that stay quiet on the sample files", async () => {

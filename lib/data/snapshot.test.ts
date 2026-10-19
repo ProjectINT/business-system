@@ -52,10 +52,11 @@ describe("buildSnapshot", () => {
     });
     expect(byKey.get("R0002")).toMatchObject({
       status: "review",
-      ruleIds: ["DQ-16"], // no payment by check-in; DQ-11 (marketing fee) is information and sets no status
+      ruleIds: ["DQ-16"], // no payment by check-in; DQ-11 (marketing fee) and DQ-24 (confirmed, no payment) are information and set no status
       failed: [
         { ruleId: "DQ-11", action: "info" },
         { ruleId: "DQ-16", action: "review" },
+        { ruleId: "DQ-24", action: "info" },
       ],
     });
     expect(byKey.get("P0002")).toMatchObject({ status: "excluded", ruleIds: ["DQ-03"], amount: null, date: "2026-09-10" });

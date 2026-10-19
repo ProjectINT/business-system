@@ -120,7 +120,7 @@ describe("per rule", () => {
     }
     expect(q.rules.map((r) => r.id)).toEqual(snapshot.rules.map((r) => r.id));
     expect(q.rules.reduce((n, r) => n + r.outcomes.fail, 0)).toBe(q.issues.length);
-    expect(q.issues.length).toBe(392);
+    expect(q.issues.length).toBe(456);
   });
 
   it("fails by action and the amount in question, in the rule's own terms", () => {
@@ -128,6 +128,7 @@ describe("per rule", () => {
     expect(of("DQ-05").failsByAction).toEqual({ hold: 42, exclude: 1 });
     expect(of("DQ-12")).toMatchObject({ failsByAction: { decide: 86 }, amount: idr(801_601_913n) }); // GBV in overlaps
     expect(of("DQ-16")).toMatchObject({ failsByAction: { review: 113 }, amount: idr(884_893_552n) }); // shortfall at check-in
+    expect(of("DQ-24")).toMatchObject({ failsByAction: { info: 64 } }); // confirmed, no payment: a note, no status
     expect(of("DQ-11")).toMatchObject({ failsByAction: { info: 30 }, amount: idr(0n) }); // marketing fee on direct bookings: information
     expect(of("DQ-15")).toMatchObject({ failsByAction: { info: 7 }, amount: idr(0n) }); // nothing to sum
     expect(of("DQ-03")).toMatchObject({ outcomes: { pass: 357, fail: 0, skip: 0, error: 0 }, failsByAction: {} });

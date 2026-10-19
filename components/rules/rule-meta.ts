@@ -4,6 +4,7 @@
 import {
   ArrowUturnCcwLeft,
   Calendar,
+  CircleQuestion,
   CirclesIntersection,
   Clock,
   Copy,
@@ -79,6 +80,12 @@ export const RULE_META: Readonly<Record<string, RuleMeta>> = {
     group: "payments",
     label: "Paid after check-in",
     description: "The payment came after check-in, though a villa is paid in full before arrival.",
+  },
+  "DQ-24": {
+    icon: CircleQuestion,
+    group: "payments",
+    label: "Confirmed, no payment",
+    description: "A booking is confirmed once it is paid, yet no payment is on file: either it has not reached us yet or the confirmation is wrong. For information.",
   },
   "DQ-14": {
     icon: ScalesUnbalanced,

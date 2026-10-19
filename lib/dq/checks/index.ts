@@ -24,6 +24,7 @@ import { dq19 } from "./dq19-payment-property-matches";
 import { dq20 } from "./dq20-dated-in-future";
 import { dq22 } from "./dq22-commission-rule-overlap";
 import { dq23 } from "./dq23-payment-after-check-in";
+import { dq24 } from "./dq24-confirmed-without-payment";
 import { controlTotals } from "./dq90-control-totals";
 
 const ROW_CHECKS: readonly Check[] = [
@@ -52,6 +53,7 @@ const ROW_CHECKS: readonly Check[] = [
   dq05,
   dq14,
   dq16,
+  dq24,
   dq19,
   dq23,
 ];
@@ -88,4 +90,5 @@ export {
   dq20,
   dq22,
   dq23,
+  dq24,
 };

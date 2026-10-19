@@ -101,6 +101,19 @@ const FAIL: Readonly<Record<RuleId, (d: Details) => string>> = {
     const out = afterOut > 0 ? `${plural(afterOut, "day")} after check-out` : afterOut === 0 ? "on the check-out day" : "before check-out";
     return `Paid ${str(d.paymentDate)}, ${plural(d.daysAfterCheckIn, "day")} after check-in ${str(d.checkIn)}, ${out}`;
   },
+  "DQ-24": (d) => {
+    const days = typeof d.daysToCheckIn === "number" ? d.daysToCheckIn : NaN;
+    const when =
+      d.checkIn === null
+        ? ""
+        : days > 0
+          ? ` · check-in ${str(d.checkIn)}, in ${plural(days, "day")}`
+          : days === 0
+            ? ` · check-in today, ${str(d.checkIn)}`
+            : ` · checked in ${str(d.checkIn)}, ${plural(-days, "day")} ago`;
+    const zero = typeof d.zeroPayments === "number" && d.zeroPayments > 0 ? ` (${plural(d.zeroPayments, "zero payment")} only)` : "";
+    return `Confirmed, but no payment on file${zero}${when}`;
+  },
   "DQ-90": (d) => `The loader read ${plural(d.rowCount, "row")}, the run checked ${num(d.rows)}`,
 };
 

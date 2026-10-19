@@ -174,6 +174,18 @@ describe("reference run on 2026-10-19", async () => {
     expect(resultsOf(report, "DQ-16").filter((r) => r.reason === "check-in is still ahead")).toHaveLength(15);
   });
 
+  it("stage 4: DQ-24 64 confirmed reservations without a payment, 6 of them before check-in", () => {
+    const fails = resultsOf(report, "DQ-24").filter((r) => r.outcome === "fail");
+    expect(fails).toHaveLength(64);
+    const ahead = fails.filter((r) => (r.details as { daysToCheckIn: number }).daysToCheckIn > 0);
+    expect(ahead.map((r) => r.recordKey).sort()).toEqual(["R0003", "R0035", "R0089", "R0097", "R0123", "R0127"]);
+    // the other 58 have checked in: DQ-16 already counts them as a debt
+    const dq16 = new Set(failedKeys(report, "DQ-16"));
+    expect(fails.filter((r) => !ahead.includes(r)).every((r) => dq16.has(r.recordKey!))).toBe(true);
+    expect(fails.every((r) => Number(r.recordKey!.slice(1)) % 2 === 1)).toBe(true); // payments exist for even ids only
+    expect(resultsOf(report, "DQ-24").filter((r) => r.reason === "status is not confirmed")).toHaveLength(20);
+  });
+
   it("stage 4: DQ-20 16 payments and 22 expenses dated after today", () => {
     const fails = resultsOf(report, "DQ-20").filter((r) => r.outcome === "fail");
     expect(fails.filter((r) => r.entity === "payment")).toHaveLength(16);

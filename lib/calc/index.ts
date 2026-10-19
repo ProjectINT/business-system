@@ -18,6 +18,7 @@ export { calculateAccruals } from "./accrual";
 export { calculateCashFlow } from "./cash";
 export { reconcileReservation, reconcile } from "./reconciliation";
 export { estimateOwnerBalance, OWNER_BALANCE_GAPS, type OwnerBalanceGap } from "./owner-balance";
-export { calculateOverview } from "./overview";
+export { itemize } from "./breakdown";
+export { calculateBreakdown, calculateOverview } from "./overview";
 export { toView, type View } from "./view";
 export type * from "./types";

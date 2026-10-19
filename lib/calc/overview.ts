@@ -1,4 +1,5 @@
 import { calculateAccruals } from "./accrual";
+import { itemize } from "./breakdown";
 import { calculateCashFlow } from "./cash";
 import { compareText } from "./order";
 import { estimateOwnerBalance } from "./owner-balance";
@@ -8,6 +9,7 @@ import { reconcile } from "./reconciliation";
 import { assertAdmitted, calculateReservations, collect } from "./reservation";
 import { assertExpenseStatus, assertScope } from "./scope";
 import type {
+  Breakdown,
   ExpenseInput,
   Overview,
   OverviewInput,
@@ -37,15 +39,8 @@ function summarize(
   };
 }
 
-/**
- * Everything the dashboard needs, per property and for the portfolio.
- * The portfolio is computed from the rows directly, not by adding up properties.
- * Records that cannot be calculated are returned in `failures` with their amounts.
- */
-export function calculateOverview(input: OverviewInput, scope: Scope, policies: CalcPolicies): Overview {
-  assertPolicies(policies);
-  assertScope(scope);
-
+/** Calculates the reservations and admits the payments and expenses; what cannot be calculated is a failure. */
+function prepare(input: OverviewInput, scope: Scope, policies: CalcPolicies) {
   const reservations = calculateReservations(input.reservations, input.commissionRules, policies);
   const calcs = collect(
     reservations.results,
@@ -74,18 +69,31 @@ export function calculateOverview(input: OverviewInput, scope: Scope, policies: 
     },
     (e) => ({ entity: "expense", recordId: e.expenseId, propertyId: e.propertyId, amount: e.amount }),
   );
+  return {
+    calcs: calcs.results,
+    payments: payments.results,
+    expenses: expenses.results,
+    failures: [...reservations.failures, ...calcs.failures, ...payments.failures, ...expenses.failures],
+  };
+}
 
+/**
+ * Everything the dashboard needs, per property and for the portfolio.
+ * The portfolio is computed from the rows directly, not by adding up properties.
+ * Records that cannot be calculated are returned in `failures` with their amounts.
+ */
+export function calculateOverview(input: OverviewInput, scope: Scope, policies: CalcPolicies): Overview {
+  assertPolicies(policies);
+  assertScope(scope);
+
+  const { calcs, payments, expenses, failures: all } = prepare(input, scope, policies);
   const selected = (id: string) => scope.propertyIds === "all" || scope.propertyIds.has(id);
-  const failures = [...reservations.failures, ...calcs.failures, ...payments.failures, ...expenses.failures].filter(
-    (f) => selected(f.propertyId),
-  );
-  const propertyIds = [
-    ...new Set([...calcs.results, ...payments.results, ...expenses.results].map((r) => r.propertyId)),
-  ]
+  const failures = all.filter((f) => selected(f.propertyId));
+  const propertyIds = [...new Set([...calcs, ...payments, ...expenses].map((r) => r.propertyId))]
     .filter(selected)
     .sort(compareText);
 
-  const args = [calcs.results, payments.results, expenses.results] as const;
+  const args = [calcs, payments, expenses] as const;
   return {
     scope: {
       period: scope.period,
@@ -104,3 +112,14 @@ export function calculateOverview(input: OverviewInput, scope: Scope, policies: 
   };
 }
 
+
+/**
+ * The records behind the accrual and cash totals of calculateOverview with the same arguments, for
+ * the whole scope; each record names its property. Failures are calculateOverview's to report.
+ */
+export function calculateBreakdown(input: OverviewInput, scope: Scope, policies: CalcPolicies): Breakdown {
+  assertPolicies(policies);
+  assertScope(scope);
+  const { calcs, payments, expenses } = prepare(input, scope, policies);
+  return itemize(calcs, payments, expenses, scope);
+}

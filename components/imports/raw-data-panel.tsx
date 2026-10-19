@@ -27,7 +27,7 @@ const ALL = "all";
 
 type StatusFilter = Status | typeof FLAGGED | typeof ALL;
 
-/** What the dashboard counts as DQ flags: rows under review or awaiting a decision. */
+/** What the dashboard counts as questions: rows under review or awaiting a decision. */
 const isFlagged = (s: Status) => s === "review" || s === "pending";
 
 /** Money files first: that is where the checks find most. */
@@ -45,7 +45,7 @@ export function RawDataPanel({ tables, rules, sourceLabel }: { tables: RawTable[
     [tables],
   );
 
-  // Villa and status live in the URL: the dashboard's DQ flags link here with them. Unknown values show everything.
+  // Villa and status live in the URL: the dashboard's questions link here with them. Unknown values show everything.
   const statusParam = params.get(RAW_PARAM.status);
   const status: StatusFilter =
     statusParam === FLAGGED || present.includes(statusParam as Status) ? (statusParam as StatusFilter) : ALL;

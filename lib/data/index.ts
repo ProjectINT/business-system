@@ -12,10 +12,12 @@ export {
   outsideOf,
   overviewOf,
   type Dashboard,
+  type ExpenseItem,
   type Headline,
   type OutsideGroup,
   type PropertyFigures,
   type PropertyRow,
+  type PropertySources,
 } from "./dashboard";
 export {
   BASE_CURRENCY,

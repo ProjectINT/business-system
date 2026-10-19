@@ -1,11 +1,11 @@
 // Invariants of the dashboard under any filter (PLAN.md 11.3; ROADMAP.md phase 4): the property rows
 // add up to the portfolio, which the calculator computes from the rows on its own; adjacent periods
 // add up to their union; the switch splits a total into clean and under review. The rows hold
-// clean records and, apart, the part under review.
+// clean records and, apart, the part under review; the records behind each figure add up to it.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { addDays, nightsBetween, type Money } from "../calc";
-import { dashboardOf, type Dashboard } from "./dashboard";
+import { dashboardOf, type Dashboard, type PropertyFigures, type PropertySources } from "./dashboard";
 import { parseFilters } from "./filters";
 import { reconciliationOf } from "./reconciliation";
 import { sampleSnapshot } from "./testing/snapshot";
@@ -72,6 +72,35 @@ describe("invariants under random filters", () => {
         expect(inHeadline("gross")).toBe(d.headline.gross.amount);
         expect(inHeadline("received")).toBe(d.headline.received.amount);
         expect(d.totals.underReview.gross).toEqual(d.underReview.gross);
+      }),
+      { numRuns: 60 },
+    );
+  });
+
+  it("the records behind each figure of a row add up to it, clean and under review", () => {
+    const sum = (list: readonly { amount: Money }[]) => list.reduce((n, x) => n + x.amount.amount, 0n);
+    const stays = (s: PropertySources, key: "gross" | "otaFee" | "managementFee") =>
+      s.stays.reduce((n, x) => n + x[key].amount, 0n);
+    const expectMadeOf = (f: PropertyFigures, s: PropertySources) => {
+      expect(s.stays.reduce((n, x) => n + x.nights, 0)).toBe(f.nights);
+      expect(stays(s, "gross")).toBe(f.gross.amount);
+      expect(stays(s, "otaFee")).toBe(f.otaFee.amount);
+      expect(stays(s, "managementFee")).toBe(f.managementFee.amount);
+      expect(sum(s.expenses)).toBe(f.operatingExpenses.amount);
+      expect(sum(s.payments)).toBe(f.received.amount);
+      expect(s.reconciliation.reduce((n, l) => n + l.difference.amount, 0n)).toBe(f.difference.amount);
+      // owner balance = gross − refunds − OTA fees − management fees − expenses
+      const balance = f.gross.amount - s.refund.amount - f.otaFee.amount - f.managementFee.amount - f.operatingExpenses.amount;
+      expect(balance).toBe(f.ownerBalance.amount);
+    };
+    fc.assert(
+      fc.property(filterArb, (f) => {
+        for (const row of dashboardFor(f).properties) {
+          expectMadeOf(row, row.sources);
+          expectMadeOf(row.underReview, row.underReviewSources);
+          expect(row.sources.stays.every((x) => x.dqStatus === "clean")).toBe(true);
+          expect(row.underReviewSources.payments.every((x) => x.dqStatus === "review")).toBe(true);
+        }
       }),
       { numRuns: 60 },
     );

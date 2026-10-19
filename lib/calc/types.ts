@@ -136,6 +136,33 @@ export interface Reconciliation {
   readonly byStatus: Readonly<Record<ReconciliationStatus, number>>;
 }
 
+/** A reservation's share of the accruals: its night lines dated in the period, added up. */
+export interface StayPart {
+  readonly reservationId: string;
+  readonly propertyId: string;
+  readonly checkIn: CalendarDate;
+  readonly checkOut: CalendarDate;
+  readonly channel: Channel;
+  readonly dqStatus: DqStatus;
+  readonly rate: Rate;
+  readonly stayNights: number; // the whole stay
+  readonly nights: number; // of them in the period
+  readonly gross: Money;
+  readonly refund: Money;
+  readonly otaFee: Money;
+  readonly managementFee: Money;
+}
+
+/**
+ * The records behind the accrual and cash totals, under the same scope; each list adds up to its
+ * totals. Reconciliation lists its records itself: Reconciliation.lines.
+ */
+export interface Breakdown {
+  readonly stays: readonly StayPart[]; // nights, gross, refund, otaFee, managementFee
+  readonly expenses: readonly ExpenseInput[]; // operatingExpenses: paid + pending, by expense_date
+  readonly payments: readonly PaymentInput[]; // cashFlow.received, by payment_date
+}
+
 export interface OwnerBalanceEstimate {
   readonly amount: Money;
   readonly isEstimate: true;

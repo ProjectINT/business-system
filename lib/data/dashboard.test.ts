@@ -60,6 +60,27 @@ describe("dashboardOf", () => {
     expect(partial.properties[0]).toMatchObject({ propertyId: "V001", name: null, cluster: null });
   });
 
+  it("each row lists the records behind its figures; the part under review lists its own", () => {
+    const [v001, v002] = d.properties;
+    expect(v001?.sources.stays.map((s) => [s.reservationId, s.nights, s.gross.amount])).toEqual([["R0001", 3, 3000000n]]);
+    expect(v001?.sources.payments.map((p) => p.paymentId)).toEqual(["P0001"]);
+    expect(v001?.sources.expenses.map((e) => [e.expenseId, e.category])).toEqual([["E0001", "cleaning"]]);
+    expect(v001?.sources.reconciliation.map((l) => [l.reservationId, l.status])).toEqual([["R0001", "matched"]]);
+    expect(v001?.underReviewSources.reconciliation).toEqual([]); // nothing under review changes R0001
+    expect(v002?.sources.stays).toEqual([]);
+    expect(v002?.underReviewSources.stays.map((s) => s.reservationId)).toEqual(["R0002"]);
+    // R0002 under review, nothing paid: the whole expected payout 3 000 000 − 450 000 is the change
+    expect(v002?.underReviewSources.reconciliation.map((l) => [l.reservationId, l.difference.amount])).toEqual([
+      ["R0002", -2550000n],
+    ]);
+  });
+
+  it("an expense whose source row is not found has no category", () => {
+    const rows = { ...snapshot.dataset.rows, expense: [] };
+    const bare = dashboardOf({ ...snapshot, dataset: { ...snapshot.dataset, rows } }, filtersOf(snapshot));
+    expect(bare.properties[0]?.sources.expenses.map((e) => e.category)).toEqual([null]);
+  });
+
   it("failures: of the calculator and of the adapter, by the selected villas", () => {
     const failing = { ...snapshot, failures: [{ entity: "payment" as const, recordId: "P0009", propertyId: "V002", code: "UNKNOWN_CURRENCY", message: "x" }] };
     expect(dashboardOf(failing, filtersOf(snapshot)).failures.data).toHaveLength(1);

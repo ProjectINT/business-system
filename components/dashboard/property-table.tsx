@@ -1,13 +1,15 @@
 "use client";
 
 // Figures by villa from clean records only, whatever the filter bar says: records under review are
-// never mixed into a cell. The switch shows, under each figure, the part they would bring.
+// never mixed into a cell. The switch shows, under each figure, the part they would bring. Hovering a
+// figure, or that part, lists the records it is made of.
 import { Chip, Link, SearchField, Switch, Table, Tooltip, type SortDescriptor } from "@heroui/react";
 import { useMemo, useState } from "react";
 import type { View } from "@/lib/calc";
 import type { Dashboard, PropertyRow } from "@/lib/data";
 import { flaggedRowsHref } from "@/lib/data/query";
 import { count, idrFull, signedFull } from "@/lib/format";
+import { FigureWithSources } from "./figure-sources";
 
 type Row = View<PropertyRow>;
 type NumericKey = "nights" | "gross" | "otaFee" | "managementFee" | "operatingExpenses" | "ownerBalance" | "received" | "difference";
@@ -33,6 +35,43 @@ function UnderReview({ value, inline = false }: { value: number; inline?: boolea
     >
       {signedFull(value)}
     </span>
+  );
+}
+
+/** A cell: the clean figure and, with the switch on, the part under review; each lists its records on hover. */
+function FigureCell({ row, column, shown }: { row: Row; column: (typeof COLUMNS)[number]; shown: boolean }) {
+  const value = row[column.id];
+  const part = row.underReview[column.id];
+  const villa = row.name ?? row.propertyId;
+  return (
+    <>
+      <FigureWithSources
+        id={column.id}
+        title={column.label}
+        villa={villa}
+        hint={column.hint}
+        value={value}
+        figures={row}
+        sources={row.sources}
+      >
+        {column.id === "nights" ? count(value) : idrFull(value)}
+      </FigureWithSources>
+      {shown && part !== 0 && (
+        <FigureWithSources
+          id={column.id}
+          title={column.label}
+          villa={villa}
+          hint={column.hint}
+          value={part}
+          figures={row.underReview}
+          sources={row.underReviewSources}
+          underReview
+          className="text-xs text-warning"
+        >
+          {signedFull(part)}
+        </FigureWithSources>
+      )}
+    </>
   );
 }
 
@@ -122,9 +161,9 @@ export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dash
                   <Table.SortableColumnHeader
                     sortDirection={sortDirection}
                     className="justify-end"
-                    title="Source rows of the villa under review or awaiting a decision, whole data set; click a number to see them"
+                    title="Questions: source rows of the villa under review or awaiting a decision, whole data set; click a number to see them"
                   >
-                    DQ flags
+                    Questions
                   </Table.SortableColumnHeader>
                 )}
               </Table.Column>
@@ -147,8 +186,9 @@ export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dash
                   <Table.Cell className="text-muted">{r.cluster ?? "—"}</Table.Cell>
                   {COLUMNS.map((c) => (
                     <Table.Cell key={c.id} className="text-end tabular-nums">
-                      {c.id === "nights" ? count(r[c.id]) : idrFull(r[c.id])}
-                      <UnderReview value={shown ? r.underReview[c.id] : 0} />
+                      <div className="flex flex-col items-end">
+                        <FigureCell row={r} column={c} shown={shown} />
+                      </div>
                     </Table.Cell>
                   ))}
                   <Table.Cell className="text-end">
@@ -160,7 +200,7 @@ export function PropertyTable({ rows, totals }: { rows: Row[]; totals: View<Dash
                             {r.flags}
                           </Chip>
                         </Link>
-                        <Tooltip.Content>Rows under review or awaiting a decision · open in Import › Raw data</Tooltip.Content>
+                        <Tooltip.Content>Questions: rows under review or awaiting a decision · open in Import › Raw data</Tooltip.Content>
                       </Tooltip>
                     ) : (
                       <span className="text-muted">—</span>

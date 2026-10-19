@@ -4,6 +4,7 @@ import { calendarDate } from "../testing/arbitraries";
 import { expectCode } from "../testing/expect";
 import {
   addDays,
+  dateIn,
   eachNight,
   fromEpochDay,
   inPeriod,
@@ -65,6 +66,13 @@ describe("calendar", () => {
     // Runs under TZ=Pacific/Kiritimati and TZ=America/Los_Angeles in test:calc:tz.
     expect(nightsBetween(d("2026-10-31"), d("2026-11-02"))).toBe(2);
     expect(eachNight(d("2026-10-31"), d("2026-11-03"))).toEqual(["2026-10-31", "2026-11-01", "2026-11-02"]);
+  });
+
+  it("dateIn: the date in the given zone, not in the process zone; Bali is UTC+8", () => {
+    expect(dateIn(new Date("2026-10-18T15:59:59Z"), "Asia/Makassar")).toBe("2026-10-18");
+    expect(dateIn(new Date("2026-10-18T16:00:00Z"), "Asia/Makassar")).toBe("2026-10-19");
+    expect(dateIn(new Date("2026-10-18T16:00:00Z"), "UTC")).toBe("2026-10-18");
+    expect(dateIn(new Date("2028-02-29T12:00:00Z"), "Asia/Makassar")).toBe("2028-02-29");
   });
 
   it("properties: addDays/nightsBetween, parse/format, eachNight length", () => {

@@ -135,7 +135,7 @@ export function scope(overrides: Partial<Scope> = {}): Scope {
     propertyIds: "all",
     includeReview: true,
     baseCurrency: "IDR",
-    asOf: d("2026-10-15"),
+    today: d("2026-10-15"),
     ...overrides,
   };
 }

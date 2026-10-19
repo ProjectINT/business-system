@@ -79,7 +79,7 @@ describe("aggregate invariants", () => {
     fc.assert(
       fc.property(overviewInput, fc.integer({ min: 1, max: 1000 }), (input, seed) => {
         deepFreeze(input);
-        const s = scope({ period: period(fromEpochDay(20666), fromEpochDay(20666 + 120)), asOf: fromEpochDay(20700) });
+        const s = scope({ period: period(fromEpochDay(20666), fromEpochDay(20666 + 120)), today: fromEpochDay(20700) });
         const o = calculateOverview(input, s, DEFAULT_POLICIES);
         expect(o.failures).toEqual([]);
 

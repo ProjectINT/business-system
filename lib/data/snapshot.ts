@@ -108,8 +108,8 @@ export function buildSnapshot(parts: SnapshotParts): Snapshot {
   const clusters = [...new Set(properties.map((p) => p.cluster).filter((c): c is string => c !== null))].sort();
 
   const dates = datesOf(dataset).sort();
-  const asOf = parseDate(report.meta.asOf);
-  const range = dates.length === 0 ? period(asOf, asOf) : period(dates[0]!, dates[dates.length - 1]!);
+  const today = parseDate(report.meta.today);
+  const range = dates.length === 0 ? period(today, today) : period(dates[0]!, dates[dates.length - 1]!);
 
   const ruleOrder = new Map(report.meta.rules.map((r, i) => [r.id, i]));
   const rules: RuleInfo[] = checks
@@ -124,8 +124,7 @@ export function buildSnapshot(parts: SnapshotParts): Snapshot {
     report,
     rules,
     policies,
-    asOf,
-    asOfDefaulted: report.meta.asOfDefaulted,
+    today,
     properties,
     clusters,
     range,

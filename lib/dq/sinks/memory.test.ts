@@ -3,7 +3,7 @@ import { failAlways } from "../testing/stubs";
 import type { RunMeta } from "../types";
 import { journalOf, MemorySink } from "./memory";
 
-const meta: RunMeta = { batchId: "csv", asOf: "2026-10-15", asOfDefaulted: true, codeVersion: "dev", rules: [] };
+const meta: RunMeta = { batchId: "csv", today: "2026-10-15", codeVersion: "dev", rules: [] };
 
 describe("MemorySink", () => {
   it("numbers runs and keeps results, verdicts and the close", async () => {

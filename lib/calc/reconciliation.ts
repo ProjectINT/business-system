@@ -28,12 +28,12 @@ function paymentDueDate(calc: ReservationCalc, policies: CalcPolicies): Calendar
 
 /**
  * Expected payout vs all payments of the reservation, whatever their date. Exact comparison, no
- * tolerance. A shortfall is `not_due` only while the due date (policy) is after the as-of date.
+ * tolerance. A shortfall is `not_due` only while the due date (policy) is after today.
  */
 export function reconcileReservation(
   calc: ReservationCalc,
   payments: readonly PaymentInput[],
-  asOf: CalendarDate,
+  today: CalendarDate,
   policies: CalcPolicies,
 ): ReconciliationLine {
   const expected = calc.expectedPayout;
@@ -42,7 +42,7 @@ export function reconcileReservation(
     expected.currency,
   );
   const cmp = compare(received, expected);
-  const due = paymentDueDate(calc, policies) <= asOf;
+  const due = paymentDueDate(calc, policies) <= today;
   let status: ReconciliationStatus;
   if (cmp === 0) status = "matched";
   else if (cmp > 0) status = "overpaid";
@@ -89,7 +89,7 @@ export function reconcile(
 
   const lines = calcs
     .filter((c) => inScope(c, scope, c.reservationId) && inPeriod(scope.period, reconciliationDate(c, policies)))
-    .map((c) => reconcileReservation(c, byReservation.get(c.reservationId) ?? [], scope.asOf, policies))
+    .map((c) => reconcileReservation(c, byReservation.get(c.reservationId) ?? [], scope.today, policies))
     .sort((a, b) => compareText(a.reservationId, b.reservationId));
 
   const byStatus: Record<ReconciliationStatus, number> = {

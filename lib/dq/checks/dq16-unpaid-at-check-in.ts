@@ -1,5 +1,5 @@
 // DQ-16 unpaidAtCheckIn: a villa is paid in full before check-in (decided 2026-10-18), so an active
-// reservation that has checked in by the as-of date with payments dated on or before check-in below
+// reservation that has checked in by today with payments dated on or before check-in below
 // GBV − OTA − refund carries a debt as of check-in. A payment on the check-in day is on time; a
 // payment after it is DQ-23's. Payments count whatever their own flags, unless excluded or duplicate.
 import type { Check, CheckContext, CheckResult } from "../types";
@@ -21,7 +21,7 @@ export const dq16: Check = {
       if (status === null) return skip(u, SKIP.notParsed("status"));
       if (!isActive(u)) return skip(u, SKIP.cancelled);
       if (check_in === null) return skip(u, SKIP.notParsed("check_in"));
-      if (check_in > ctx.asOf) return skip(u, SKIP.checkInAfterAsOf);
+      if (check_in > ctx.today) return skip(u, SKIP.checkInAhead);
       const expected = expectedPayout(u);
       if (expected === null) return skip(u, SKIP.notParsed("amounts"));
       if (expected <= 0n) return pass(u);

@@ -7,13 +7,11 @@
 create table app.dq_run (
   run_id uuid primary key default gen_random_uuid(),
   batch_id uuid references app.import_batch,  -- null — запуск с решениями без новой пачки
-  as_of date not null,  -- дата среза: от неё зависят DQ-16 и DQ-20
-  as_of_defaulted boolean not null,  -- true: в пачке даты нет, взят наибольший updated_at по действующему набору
   code_version text not null,  -- git sha
   rules jsonb not null,  -- [{"id": "DQ-01", "version": 1}, ...]
   status text not null default 'running',
   started_by text not null,
-  started_at timestamptz not null default now(),
+  started_at timestamptz not null default now(),  -- его дата по Бали — «сегодня» запуска, от неё зависят DQ-16 и DQ-20
   finished_at timestamptz,
   error text,
   summary jsonb,  -- счётчики: опубликовано, ждёт решения (строк и сумма), исключено; по файлам пачки

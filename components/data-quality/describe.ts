@@ -91,7 +91,7 @@ const FAIL: Readonly<Record<RuleId, (d: Details) => string>> = {
         : `Rate ${str(d.checkInRate)} at check-in becomes ${d.rateFrom === null ? "no rule" : str(d.rateFrom)} from ${str(d.from)}`,
   "DQ-18": (d) => `Cancelled with a partial refund: ${num(d.refund)} of ${num(d.gross)} refunded, ${num(d.retained)} retained`,
   "DQ-19": (d) => `Payment on villa ${str(d.paymentProperty)}, its reservation on ${str(d.reservationProperty)}`,
-  "DQ-20": (d) => `Dated ${str(d.date)}, ${plural(d.daysAfter, "day")} after the as-of date ${str(d.asOf)}`,
+  "DQ-20": (d) => `Dated ${str(d.date)}, ${plural(d.daysAfter, "day")} after today, ${str(d.today)}`,
   "DQ-22": (d) =>
     `Rate ${d.rate === null ? "?" : str(d.rate)}; ${list<{ other: string; from: string; to: string | null; inForce: string }>(d.overlaps)
       .map((o) => `overlaps ${o.other} ${o.from} → ${o.to ?? "open end"}, where ${o.inForce} applies`)

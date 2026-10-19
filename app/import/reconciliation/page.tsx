@@ -8,6 +8,7 @@ import { ReconciliationView } from "@/components/reconciliation/reconciliation-v
 import { toDecimalString, toView, type Money } from "@/lib/calc";
 import { dataSource, filterOptionsOf, parseFilters, reconciliationOf } from "@/lib/data";
 import { idrFull } from "@/lib/format";
+import { todayInBali } from "@/lib/today";
 
 export const metadata: Metadata = {
   title: "Reconciliation — Villa Portfolio",
@@ -32,7 +33,7 @@ export default function ReconciliationPage({ searchParams }: PageProps<"/import/
 }
 
 async function Reconciliation({ searchParams }: Pick<PageProps<"/import/reconciliation">, "searchParams">) {
-  const snapshot = await dataSource().snapshot();
+  const snapshot = await dataSource().snapshot(await todayInBali());
   const { filters, warnings } = parseFilters(await searchParams, snapshot);
   const r = reconciliationOf(snapshot, filters);
   const state = {

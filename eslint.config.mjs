@@ -32,7 +32,7 @@ const eslintConfig = defineConfig([
         "error",
         { selector: "Literal[raw=/^\\d*\\.\\d/]", message: 'Дробные литералы запрещены: parseRate("0.17")' },
         { selector: "CallExpression[callee.property.name='toFixed']", message: "toFixed округляет двоичное число" },
-        { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: "Текущая дата — только аргументом asOf" },
+        { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: "Сегодняшняя дата — только аргументом today" },
       ],
       "no-restricted-imports": [
         "error",

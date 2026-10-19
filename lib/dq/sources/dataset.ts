@@ -33,13 +33,5 @@ export function datasetSource(dataset: Dataset, batchId: string = CSV_BATCH_ID):
       return (entity === "file" ? fileUnits : rows[entity as RowEntity]) as readonly Unit<E>[];
     },
     superseded: () => [],
-    defaultAsOf() {
-      let max: string | null = null;
-      for (const r of rows.reservation) {
-        const d = r.values.updated_at;
-        if (d !== null && (max === null || d > max)) max = d;
-      }
-      return max;
-    },
   };
 }

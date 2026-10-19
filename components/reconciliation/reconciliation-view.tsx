@@ -208,8 +208,8 @@ export function ReconciliationView({
             </Table.Content>
           </Table.ScrollContainer>
           <Table.Footer className="text-sm text-muted">
-            Reservations checking out in the period. Due at check-in: “not due” only when check-in is after the as-of
-            date. Cancellations expect 0.
+            Reservations checking out in the period. Due at check-in: “not due” only when check-in is still ahead.
+            Cancellations expect 0.
           </Table.Footer>
         </Table>
       </section>

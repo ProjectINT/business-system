@@ -66,7 +66,7 @@ describe("buildSnapshot", () => {
     expect(s.records.map((r) => r.unitId)).toEqual([...s.records.map((r) => r.unitId)].sort());
   });
 
-  it("the data range spans stays, payments and expenses; an empty set has the as-of date alone", async () => {
+  it("the data range spans stays, payments and expenses; an empty set has today alone", async () => {
     const s = await snapshotOf({
       reservation: [{ ...RESERVATION, check_in: "2026-08-30" }],
       payment: [{ ...PAYMENT, payment_date: "2026-11-02" }],

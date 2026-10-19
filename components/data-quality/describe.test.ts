@@ -16,7 +16,7 @@ function fails(report: RunReport) {
 group("describe", () => {
   it("words every problem of the sample files from its facts", async () => {
     const q = qualityOf(await sampleSnapshot());
-    expect(q.issues).toHaveLength(401);
+    expect(q.issues).toHaveLength(392);
     for (const i of q.issues) {
       const text = describe(i.ruleId, i.result);
       expect(text, `${i.ruleId} ${i.record.unitId}`).toBeTruthy();

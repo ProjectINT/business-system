@@ -44,7 +44,7 @@ describe("DQ-90", () => {
     const files = source.units("file").map((f): FileUnit => (f.fileEntity === "payment" ? { ...f, rowUnitIds: f.rowUnitIds.slice(1) } : f));
     const ctx: CheckContext = {
       batchId: "csv",
-      asOf: "2026-10-15",
+      today: "2026-10-15",
       units: (e) => (e === "file" ? files : source.units(e)) as never,
       statusSoFar: () => "clean",
       decisions: NO_DECISIONS,

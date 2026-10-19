@@ -1,18 +1,18 @@
 #!/usr/bin/env tsx
 // Runs the data-quality rules on the CSV files and prints a summary per rule (VALIDATION_PLAN.md 8).
 //
-//   npm run dq                       files in Technical_Challenge_Data/, as-of = largest updated_at
+//   npm run dq                       files in Technical_Challenge_Data/, checked as of today in Bali
 //   npm run dq -- --dir <dir>        another directory with the five files
-//   npm run dq -- --as-of 2026-10-31 another as-of date
 //   npm run dq -- --cases            also list the cases a human has to decide
 import { parseArgs } from "node:util";
+import { dateIn } from "../lib/calc";
+import { TIME_ZONE } from "../lib/data";
 import { loadDataset } from "../lib/ingest";
 import { buildCases, defaultRegistry, MemorySink, datasetSource, runChecks, type RunReport, type Status } from "../lib/dq";
 
 const { values: opt } = parseArgs({
   options: {
     dir: { type: "string" },
-    "as-of": { type: "string" },
     cases: { type: "boolean", default: false },
   },
 });
@@ -33,7 +33,7 @@ function pad(s: string, n: number, right = false): string {
 
 function printSummary(report: RunReport): void {
   const { meta, summary } = report;
-  console.log(`DQ run · as of ${meta.asOf}${meta.asOfDefaulted ? " (default: largest updated_at)" : ""} · ${report.status}`);
+  console.log(`DQ run · today ${meta.today} (Bali) · ${report.status}`);
   console.log(`rows: ${STATUSES.map((s) => `${s} ${summary.counts[s]}`).join(" · ")}`);
   if (summary.failures.length > 0) for (const f of summary.failures) console.log(`  ! ${f.ruleId}: ${f.message}`);
   console.log("");
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
     source: datasetSource(dataset),
     registry: defaultRegistry(),
     sink,
-    ...(opt["as-of"] === undefined ? {} : { asOf: opt["as-of"] }),
+    today: dateIn(new Date(), TIME_ZONE),
   });
   printSummary(report);
   if (opt.cases) printCases(report);

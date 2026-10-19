@@ -17,7 +17,7 @@ describe("calculateOverview", () => {
   it("lists properties in order and echoes the scope", () => {
     const o = calculateOverview(base, scope(), DEFAULT_POLICIES);
     expect(o.properties.map((p) => p.propertyId)).toEqual(["V003", "V011", "V013", "V015"]);
-    expect(o.scope).toEqual({ period: scope().period, includeReview: true, baseCurrency: "IDR", asOf: "2026-10-15" });
+    expect(o.scope).toEqual({ period: scope().period, includeReview: true, baseCurrency: "IDR", today: "2026-10-15" });
     expect(o.failures).toEqual([]);
   });
 

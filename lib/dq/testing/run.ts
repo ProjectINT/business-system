@@ -8,10 +8,10 @@ import { MemorySink } from "../sinks/memory";
 import { datasetSource } from "../sources/dataset";
 import type { Check, CheckContext, CheckResult, Dataset, JournalResult, RuleId, RunReport, Status } from "../types";
 
-export const AS_OF = "2026-10-15";
+export const TODAY = "2026-10-15";
 
 export interface RunOn {
-  readonly asOf?: string;
+  readonly today?: string;
   readonly checks?: readonly Check[];
   readonly policies?: CalcPolicies;
 }
@@ -22,23 +22,23 @@ export async function runOn(dataset: Dataset, opts: RunOn = {}): Promise<RunRepo
     source: datasetSource(dataset),
     registry,
     sink: new MemorySink(),
-    asOf: opts.asOf ?? AS_OF,
+    today: opts.today ?? TODAY,
     ...(opts.policies === undefined ? {} : { policies: opts.policies }),
   });
 }
 
 /** The context a rule sees in a full run: statuses after every rule ordered before it. */
-export function contextBefore(check: Check, dataset: Dataset, asOf: string = AS_OF): () => Promise<CheckContext> {
+export function contextBefore(check: Check, dataset: Dataset, today: string = TODAY): () => Promise<CheckContext> {
   return async () => {
     const ordered = defaultRegistry().checks;
     const index = ordered.findIndex((c) => c.id === check.id);
     const before = index < 0 ? ordered : ordered.slice(0, index);
-    const report = await runOn(dataset, { asOf, checks: before });
+    const report = await runOn(dataset, { today, checks: before });
     const status = new Map(report.verdicts.map((v) => [v.unitId, v.status]));
     const source = datasetSource(dataset);
     return {
       batchId: source.batchId,
-      asOf,
+      today,
       units: (e) => source.units(e),
       statusSoFar: (unitId) => {
         const s = status.get(unitId);
@@ -52,11 +52,11 @@ export function contextBefore(check: Check, dataset: Dataset, asOf: string = AS_
 }
 
 /** The rule alone, every status `clean`: reaches the branches a full run never does (a blank value is DQ-03's first). */
-export async function runAlone(check: Check, dataset: Dataset, asOf: string = AS_OF): Promise<readonly CheckResult[]> {
+export async function runAlone(check: Check, dataset: Dataset, today: string = TODAY): Promise<readonly CheckResult[]> {
   const source = datasetSource(dataset);
   const ctx: CheckContext = {
     batchId: source.batchId,
-    asOf,
+    today,
     units: (e) => source.units(e),
     statusSoFar: () => "clean",
     decisions: NO_DECISIONS,
@@ -67,9 +67,9 @@ export async function runAlone(check: Check, dataset: Dataset, asOf: string = AS
 }
 
 /** Skip reasons of a rule run alone, by record key (unit id when there is no key). */
-export async function skipsAlone(check: Check, dataset: Dataset, asOf: string = AS_OF): Promise<Record<string, string>> {
+export async function skipsAlone(check: Check, dataset: Dataset, today: string = TODAY): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
-  for (const r of await runAlone(check, dataset, asOf)) if (r.outcome === "skip") out[r.recordKey ?? r.unitId] = r.reason!;
+  for (const r of await runAlone(check, dataset, today)) if (r.outcome === "skip") out[r.recordKey ?? r.unitId] = r.reason!;
   return out;
 }
 

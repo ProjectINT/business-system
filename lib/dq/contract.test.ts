@@ -21,7 +21,7 @@ const source = datasetSource(
 function context(): CheckContext {
   return {
     batchId: source.batchId,
-    asOf: "2026-10-15",
+    today: "2026-10-15",
     units: (e) => source.units(e),
     statusSoFar: () => "clean",
     decisions: NO_DECISIONS,

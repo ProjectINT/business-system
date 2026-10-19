@@ -25,8 +25,8 @@ const unique = <T>(xs: readonly T[]) => [...new Set(xs)];
 const seq = (prefix: string, from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${String(from + i).padStart(4, "0")}`);
 
-describe("reference run at 2026-10-15", async () => {
-  const report: RunReport = await runOn(sample, { asOf: "2026-10-15" });
+describe("reference run on 2026-10-19", async () => {
+  const report: RunReport = await runOn(sample, { today: "2026-10-19" });
   const verdict = new Map(report.verdicts.map((v) => [v.unitId, v]));
   const status = (key: string): Status[] => report.verdicts.filter((v) => v.recordKey === key).map((v) => v.status);
 
@@ -166,18 +166,18 @@ describe("reference run at 2026-10-15", async () => {
     expect(failedKeys(report, "DQ-19")).toEqual([]);
   });
 
-  it("stage 4: DQ-16 109 reservations unpaid at check-in, 58 of them without a single payment", () => {
+  it("stage 4: DQ-16 113 reservations unpaid at check-in, 62 of them without a single payment", () => {
     const fails = resultsOf(report, "DQ-16").filter((r) => r.outcome === "fail");
-    expect(fails).toHaveLength(109);
-    expect(fails.filter((r) => (r.details as { payments: number }).payments === 0)).toHaveLength(58);
+    expect(fails).toHaveLength(113);
+    expect(fails.filter((r) => (r.details as { payments: number }).payments === 0)).toHaveLength(62);
     expect(fails.every((r) => (r.details as { paidByCheckIn: bigint; expected: bigint }).paidByCheckIn < (r.details as { expected: bigint }).expected)).toBe(true);
-    expect(resultsOf(report, "DQ-16").filter((r) => r.reason === "check-in after the as-of date")).toHaveLength(19);
+    expect(resultsOf(report, "DQ-16").filter((r) => r.reason === "check-in is still ahead")).toHaveLength(15);
   });
 
-  it("stage 4: DQ-20 22 payments and 29 expenses after the as-of date", () => {
+  it("stage 4: DQ-20 16 payments and 22 expenses dated after today", () => {
     const fails = resultsOf(report, "DQ-20").filter((r) => r.outcome === "fail");
-    expect(fails.filter((r) => r.entity === "payment")).toHaveLength(22);
-    expect(fails.filter((r) => r.entity === "expense")).toHaveLength(29);
+    expect(fails.filter((r) => r.entity === "payment")).toHaveLength(16);
+    expect(fails.filter((r) => r.entity === "expense")).toHaveLength(22);
     expect(resultFor(report, "DQ-20", "P0017").reason).toBe("row excluded or duplicate by an earlier rule");
   });
 
@@ -189,8 +189,8 @@ describe("reference run at 2026-10-15", async () => {
     expect(resultsOf(report, "DQ-23").filter((r) => r.reason === "zero payment (DQ-15)")).toHaveLength(6);
   });
 
-  it("row statuses: 131 clean, 87 review, 131 pending, 6 excluded, 2 duplicate", () => {
-    expect(report.summary.counts).toEqual({ clean: 131, review: 87, pending: 131, excluded: 6, duplicate: 2, superseded: 0 });
+  it("row statuses: 137 clean, 81 review, 131 pending, 6 excluded, 2 duplicate", () => {
+    expect(report.summary.counts).toEqual({ clean: 137, review: 81, pending: 131, excluded: 6, duplicate: 2, superseded: 0 });
     const excluded = report.verdicts.filter((v) => v.status === "excluded").map((v) => v.recordKey).sort();
     expect(excluded).toEqual(["E0017", "P0017", "P0036", "R0034", "R0061", "R0072"]);
     const pending = report.verdicts.filter((v) => v.status === "pending");
@@ -211,13 +211,13 @@ describe("reference run at 2026-10-15", async () => {
   });
 });
 
-describe("other as-of dates", () => {
+describe("another today", () => {
   it("2026-10-31: DQ-16 126, DQ-20 3 payments; 2026-11-05: DQ-16 126, DQ-20 none", async () => {
-    const oct = await runOn(sample, { asOf: "2026-10-31" });
+    const oct = await runOn(sample, { today: "2026-10-31" });
     expect(failedKeys(oct, "DQ-16")).toHaveLength(126);
     expect(resultsOf(oct, "DQ-16").filter((r) => r.outcome === "fail" && (r.details as { payments: number }).payments === 0)).toHaveLength(68);
     expect(resultsOf(oct, "DQ-20").filter((r) => r.outcome === "fail" && r.entity === "payment")).toHaveLength(3);
-    const nov = await runOn(sample, { asOf: "2026-11-05" });
+    const nov = await runOn(sample, { today: "2026-11-05" });
     expect(failedKeys(nov, "DQ-16")).toHaveLength(126);
     expect(failedKeys(nov, "DQ-20")).toEqual([]);
   });

@@ -21,7 +21,7 @@ import { dq16 } from "./dq16-unpaid-at-check-in";
 import { dq17 } from "./dq17-commission-rule-covers";
 import { dq18 } from "./dq18-partial-refund-on-cancel";
 import { dq19 } from "./dq19-payment-property-matches";
-import { dq20 } from "./dq20-event-after-as-of";
+import { dq20 } from "./dq20-dated-in-future";
 import { dq22 } from "./dq22-commission-rule-overlap";
 import { dq23 } from "./dq23-payment-after-check-in";
 import { controlTotals } from "./dq90-control-totals";

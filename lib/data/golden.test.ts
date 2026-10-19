@@ -20,9 +20,8 @@ const SEPTEMBER = { from: "2026-09-01", to: "2026-09-30" };
 const OCTOBER = { from: "2026-10-01", to: "2026-10-31" };
 
 describe("snapshot of the sample", () => {
-  it("as of the largest updated_at, range of every date, 20 villas in 4 clusters", () => {
-    expect(snapshot.asOf).toBe("2026-10-15");
-    expect(snapshot.asOfDefaulted).toBe(true);
+  it("today as given, range of every date, 20 villas in 4 clusters", () => {
+    expect(snapshot.today).toBe("2026-10-19");
     expect(snapshot.range).toEqual({ from: "2026-09-01", to: "2026-11-05" });
     expect(snapshot.properties).toHaveLength(20);
     expect(snapshot.clusters).toEqual(["Bukit", "Canggu", "Sanur", "Ubud"]);
@@ -110,7 +109,7 @@ describe("golden: the portfolio, records under review included", () => {
       reconciledReceived: 511162604n,
       difference: -562480847n,
     });
-    expect(d.byStatus).toEqual({ matched: 79, not_received: 58, underpaid: 0, overpaid: 0, not_due: 10 });
+    expect(d.byStatus).toEqual({ matched: 79, not_received: 62, underpaid: 0, overpaid: 0, not_due: 6 });
     expect(d.cancellations.count).toBe(12);
     expect(d.cancellations.gross.amount).toBe(86163513n);
     expect(d.failures).toEqual({ calc: [], data: [] });
@@ -159,8 +158,8 @@ describe("golden: the portfolio, records under review included", () => {
       reconciledReceived: 232645947n,
       difference: -272753050n,
     });
-    // not_due: check-in after 2026-10-15, the payment is not due yet (paymentDue: check_in)
-    expect(d.byStatus).toEqual({ matched: 36, not_received: 22, underpaid: 0, overpaid: 0, not_due: 9 });
+    // not_due: check-in after 2026-10-19, the payment is not due yet (paymentDue: check_in)
+    expect(d.byStatus).toEqual({ matched: 36, not_received: 26, underpaid: 0, overpaid: 0, not_due: 5 });
   });
 });
 
@@ -169,29 +168,29 @@ describe("golden: records under review left out (review=off)", () => {
 
   it("only clean records remain: DQ-16, DQ-23 and the cases put most of the data under review", () => {
     expect(amounts(d.headline)).toEqual({
-      nights: 59,
-      gross: 136099743n,
+      nights: 55,
+      gross: 121313115n,
       refund: 0n,
-      otaFee: 18939287n,
-      otaFeeOta: 15971833n,
+      otaFee: 16721293n,
+      otaFeeOta: 13753839n,
       otaFeeDirect: 2967454n, // marketing fee of R0035 and R0100: DQ-11 is information, nothing else flags them
-      netRental: 117160456n,
-      managementFee: 23969565n,
-      operatingExpenses: 33830975n,
-      ownerBalance: 59359916n,
+      netRental: 104591822n,
+      managementFee: 21455838n,
+      operatingExpenses: 37386639n,
+      ownerBalance: 45749345n,
       received: 24450887n,
-      paidExpenses: 25448397n,
-      netCashFlow: -997510n,
-      expected: 117160456n,
+      paidExpenses: 29004061n,
+      netCashFlow: -4553174n,
+      expected: 104591822n,
       reconciledReceived: 24450887n,
-      difference: -92709569n,
+      difference: -80140935n,
     });
   });
 
   it("the part under review is the difference between the two runs, whatever the switch", () => {
     const on = dashboardOf(snapshot, filtersOf(snapshot));
     expect(d.underReview).toEqual(on.underReview);
-    expect(on.underReview.gross.amount).toBe(1256651523n - 136099743n);
+    expect(on.underReview.gross.amount).toBe(1256651523n - 121313115n);
     expect(amounts(on.underReview)).toEqual(
       Object.fromEntries(
         Object.entries(amounts(headlineOf(on.overview.portfolio))).map(([k, v]) => [

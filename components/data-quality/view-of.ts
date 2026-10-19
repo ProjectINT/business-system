@@ -131,8 +131,6 @@ export interface VillaView {
 }
 
 export interface DataQualityModel {
-  asOf: string;
-  asOfDefaulted: boolean;
   sourceLabel: string;
   runStatus: "succeeded" | "failed";
   runFailures: string[];
@@ -187,8 +185,6 @@ export function dataQualityOf(snapshot: Snapshot): DataQualityModel {
   const held = q.held.reduce((s, p) => s + (p.amount?.currency === "IDR" ? p.amount.amount : 0n), 0n);
 
   return {
-    asOf: snapshot.asOf,
-    asOfDefaulted: snapshot.asOfDefaulted,
     sourceLabel: snapshot.source.label,
     runStatus: snapshot.report.status,
     runFailures: snapshot.report.summary.failures.map((f) => `${ruleMeta(f.ruleId).label}: ${f.message}`),

@@ -112,8 +112,8 @@ export interface Decisions {
 export interface CheckContext {
   /** `null` — a run with decisions and no new batch (VALIDATION_PLAN.md 7.5). */
   readonly batchId: string | null;
-  /** As-of date of the run, ISO date; the only "today" a rule may use. */
-  readonly asOf: string;
+  /** Today in Bali, ISO date: the only "today" a rule may use. Given by the caller, so a run is reproducible. */
+  readonly today: string;
   /** The effective set (VALIDATION_PLAN.md 2); the same array on every call within a run. */
   units<E extends Entity>(entity: E): readonly Unit<E>[];
   /** Status of a row after the rules executed so far and the decisions in force. */
@@ -130,8 +130,6 @@ export interface Source {
   units<E extends Entity>(entity: E): readonly Unit<E>[];
   /** Rows `pending` of earlier batches displaced by a newer version of the same key (priority 0). */
   superseded(): readonly RowUnit[];
-  /** Largest `updated_at` over the set: the as-of date when the batch sets none. `null` — no dates. */
-  defaultAsOf(): string | null;
 }
 
 export interface Verdict {
@@ -152,9 +150,7 @@ export interface RuleRef {
 
 export interface RunMeta {
   readonly batchId: string | null;
-  readonly asOf: string;
-  /** `true`: the batch had no as-of date, the largest `updated_at` of the set was taken. */
-  readonly asOfDefaulted: boolean;
+  readonly today: string;
   readonly codeVersion: string;
   readonly rules: readonly RuleRef[];
 }

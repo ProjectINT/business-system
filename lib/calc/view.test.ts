@@ -27,8 +27,8 @@ describe("toView", () => {
     expect(JSON.parse(JSON.stringify(v))).toEqual(v);
     expect(v.portfolio.accruals.gross).toBe(Number(o.portfolio.accruals.gross.amount));
     expectTypeOf(v.portfolio.accruals.gross).toEqualTypeOf<number>();
-    expectTypeOf(v.scope.asOf).toEqualTypeOf<typeof o.scope.asOf>(); // a calendar date stays a string, not an object
-    expectTypeOf(v.scope.asOf).toExtend<string>();
+    expectTypeOf(v.scope.today).toEqualTypeOf<typeof o.scope.today>(); // a calendar date stays a string, not an object
+    expectTypeOf(v.scope.today).toExtend<string>();
   });
 
   it("keeps a reservation's shape", () => {

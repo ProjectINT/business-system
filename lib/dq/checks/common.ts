@@ -50,7 +50,7 @@ export const SKIP = {
   zeroPayment: "zero payment (DQ-15)",
   exactDuplicate: "exact duplicate of an earlier row (DQ-01)",
   noKey: "row has no natural key (DQ-03)",
-  checkInAfterAsOf: "check-in after the as-of date",
+  checkInAhead: "check-in is still ahead",
   notReceived: "payment status is not received",
   notPaid: "expense not paid yet",
 } as const;

@@ -161,8 +161,8 @@ export const RULE_META: Readonly<Record<string, RuleMeta>> = {
   "DQ-20": {
     icon: Calendar,
     group: "files",
-    label: "After the report date",
-    description: "Dated after the as-of date of the data: it had not happened when the export was taken.",
+    label: "Dated in the future",
+    description: "Received or paid on a day that has not come yet: the date is wrong.",
   },
   "DQ-03": {
     tag: "FMT",

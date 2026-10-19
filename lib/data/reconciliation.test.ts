@@ -10,7 +10,7 @@ const snapshot = await snapshotOf({
   reservation: [
     RESERVATION, // expected 2 550 000, paid on check-in → matched
     { ...RESERVATION, reservation_id: "R0002", check_in: "2026-09-20", check_out: "2026-09-23" },
-    { ...RESERVATION, reservation_id: "R0003", property_id: "V002", check_in: "2026-10-20", check_out: "2026-10-22" }, // after as-of
+    { ...RESERVATION, reservation_id: "R0003", property_id: "V002", check_in: "2026-10-20", check_out: "2026-10-22" }, // check-in still ahead
   ],
   payment: [
     PAYMENT,

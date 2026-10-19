@@ -8,9 +8,10 @@ import { PageSkeleton } from "@/components/dashboard/page-skeleton";
 import { PropertyTable } from "@/components/dashboard/property-table";
 import { toView } from "@/lib/calc";
 import { dashboardOf, dataSource, filterOptionsOf, parseFilters, searchOf } from "@/lib/data";
+import { todayInBali } from "@/lib/today";
 
 // Filters come from the URL, so the figures render per request behind a Suspense boundary;
-// loading and the checks run once per process (lib/data/csv-source.ts).
+// loading and the checks run once per process and day (lib/data/csv-source.ts).
 export default function OverviewPage({ searchParams }: PageProps<"/">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
@@ -20,7 +21,7 @@ export default function OverviewPage({ searchParams }: PageProps<"/">) {
 }
 
 async function Overview({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
-  const snapshot = await dataSource().snapshot();
+  const snapshot = await dataSource().snapshot(await todayInBali());
   const { filters, warnings } = parseFilters(await searchParams, snapshot);
   const d = dashboardOf(snapshot, filters);
   const query = searchOf(filters, snapshot.range);

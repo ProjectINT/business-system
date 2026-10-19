@@ -14,7 +14,6 @@ create table app.import_batch (
   batch_id uuid primary key default gen_random_uuid(),
   source_kind text not null,
   source_ref text not null,  -- папка с CSV, id таблицы Google Sheets
-  as_of date,  -- дата среза выгрузки; null — dq_run выберет её по правилу
   status text not null default 'loading',
   same_as_batch_id uuid references app.import_batch,  -- для skipped: пачка, куда загружен последний из пропущенных файлов
   started_by text not null,  -- пользователь или 'cli'

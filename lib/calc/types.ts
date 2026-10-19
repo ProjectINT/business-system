@@ -88,7 +88,7 @@ export interface Scope {
   readonly propertyIds: ReadonlySet<string> | "all";
   readonly includeReview: boolean;
   readonly baseCurrency: Currency;
-  readonly asOf: CalendarDate;
+  readonly today: CalendarDate;
 }
 
 export interface Accruals {
@@ -209,7 +209,7 @@ export interface Overview {
     readonly period: Period;
     readonly includeReview: boolean;
     readonly baseCurrency: Currency;
-    readonly asOf: CalendarDate;
+    readonly today: CalendarDate;
   };
   readonly portfolio: Summary;
   readonly properties: readonly PropertySummary[];

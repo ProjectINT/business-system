@@ -1,19 +1,18 @@
-// DQ-20 eventAfterAsOf: a payment received, or an expense paid, on a date after the as-of date of the
-// run. The export says it happened after the export was taken; flagged, and the as-of date itself is
-// a question for the finance director (VALIDATION_PLAN.md 12.2).
+// DQ-20 datedInFuture: a payment received, or an expense paid, on a date after today. Money cannot
+// have come in or gone out on a day that has not come yet, so the date is wrong; flagged.
 import { nightsBetween, type CalendarDate } from "../../calc";
 import type { Check, CheckContext, CheckResult, RowUnit } from "../types";
 import { amountIdrOf, fail, isOutUnit, pass, skip, SKIP } from "./common";
 
 function after(ctx: CheckContext, u: RowUnit, date: CalendarDate): CheckResult {
-  if (date <= ctx.asOf) return pass(u);
-  return fail(u, { details: { date, asOf: ctx.asOf, daysAfter: nightsBetween(ctx.asOf as CalendarDate, date) }, amountIdr: amountIdrOf(u) });
+  if (date <= ctx.today) return pass(u);
+  return fail(u, { details: { date, today: ctx.today, daysAfter: nightsBetween(ctx.today as CalendarDate, date) }, amountIdr: amountIdrOf(u) });
 }
 
 export const dq20: Check = {
   id: "DQ-20",
   version: 1,
-  title: "Event after the as-of date",
+  title: "Dated in the future",
   entity: ["payment", "expense"],
   action: "review",
   engine: "ts",

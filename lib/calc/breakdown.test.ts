@@ -54,7 +54,7 @@ describe("calculateBreakdown", () => {
       fc.property(overviewInput, fc.boolean(), (input, includeReview) => {
         const s = scope({
           period: period(fromEpochDay(20666), fromEpochDay(20666 + 45)),
-          asOf: fromEpochDay(20700),
+          today: fromEpochDay(20700),
           includeReview,
         });
         const o = calculateOverview(input, s, DEFAULT_POLICIES);

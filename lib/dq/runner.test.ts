@@ -17,7 +17,7 @@ const small = datasetFrom({
 
 async function execute(checks: readonly Check[], source: Source = datasetSource(small), extra: Partial<Parameters<typeof runChecks>[0]> = {}) {
   const sink = new MemorySink();
-  const report = await runChecks({ source, registry: createRegistry(checks), sink, asOf: "2026-10-15", ...extra });
+  const report = await runChecks({ source, registry: createRegistry(checks), sink, today: "2026-10-15", ...extra });
   return { sink, report, run: sink.run(report.runId) };
 }
 
@@ -37,8 +37,7 @@ describe("runChecks on the sample data", () => {
     expect(report.summary.counts).toEqual({ clean: 206, review: 151, pending: 0, excluded: 0, duplicate: 0, superseded: 0 });
     expect(report.meta).toEqual({
       batchId: "csv",
-      asOf: "2026-10-15",
-      asOfDefaulted: false,
+      today: "2026-10-15",
       codeVersion: "dev",
       rules: [
         { id: "DQ-01", version: 1 },
@@ -50,7 +49,7 @@ describe("runChecks on the sample data", () => {
   it("two runs on the same data give the same journal", async () => {
     const checks = [passAlways({ id: "DQ-01", entity: "payment" }), failKeys(["R0015", "R0034"], { id: "DQ-04", action: "exclude" })];
     const sink = new MemorySink();
-    const options = { source: datasetSource(sample), registry: createRegistry(checks), sink, asOf: "2026-10-15" };
+    const options = { source: datasetSource(sample), registry: createRegistry(checks), sink, today: "2026-10-15" };
     const a = await runChecks(options);
     const b = await runChecks(options);
     expect(a.runId).not.toBe(b.runId);
@@ -71,28 +70,11 @@ describe("runChecks on the sample data", () => {
   });
 });
 
-describe("as-of date", () => {
-  it("takes the largest updated_at when none is given, and says so", async () => {
-    const sink = new MemorySink();
-    const report = await runChecks({ source: datasetSource(sample), registry: createRegistry([]), sink });
-    expect(report.meta.asOf).toBe("2026-10-15");
-    expect(report.meta.asOfDefaulted).toBe(true);
-    expect(report.status).toBe("succeeded");
-    expect(report.verdicts.every((v) => v.status === "clean")).toBe(true);
-  });
-
-  it("refuses to run without any date", async () => {
-    const sink = new MemorySink();
-    await expect(runChecks({ source: datasetSource(datasetFrom({})), registry: createRegistry([]), sink })).rejects.toThrow(
-      expect.objectContaining({ code: "NO_AS_OF" }),
-    );
-    expect(sink.runs).toEqual([]);
-  });
-
+describe("today", () => {
   it("refuses a date that is not a calendar date", async () => {
     const sink = new MemorySink();
     await expect(
-      runChecks({ source: datasetSource(small), registry: createRegistry([]), sink, asOf: "2026-02-30" }),
+      runChecks({ source: datasetSource(small), registry: createRegistry([]), sink, today: "2026-02-30" }),
     ).rejects.toThrow(expect.objectContaining({ code: "INVALID_DATE" }));
   });
 });

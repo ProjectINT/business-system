@@ -37,8 +37,8 @@ export interface RunOptions {
   readonly source: Source;
   readonly registry: Registry;
   readonly sink: Sink;
-  /** As-of date; without it, the largest `updated_at` of the set, marked as defaulted. */
-  readonly asOf?: string;
+  /** Today in Bali, ISO date. */
+  readonly today: string;
   readonly policies?: CalcPolicies;
   readonly decisions?: Decisions;
   /** Git sha or alike, recorded with the run. */
@@ -53,15 +53,12 @@ export async function runChecks(options: RunOptions): Promise<RunReport> {
   const decisions = options.decisions ?? NO_DECISIONS;
   const policies = options.policies ?? DEFAULT_POLICIES;
 
-  const defaulted = options.asOf === undefined;
-  const asOf = options.asOf ?? source.defaultAsOf();
-  if (asOf === null) throw new DqError("NO_AS_OF", "No as-of date given and the set has no dates to default to");
-  parseDate(asOf); // a calendar date or a CalcError
+  const { today } = options;
+  parseDate(today); // a calendar date or a CalcError
 
   const meta: RunMeta = {
     batchId: source.batchId,
-    asOf,
-    asOfDefaulted: defaulted,
+    today,
     codeVersion: options.codeVersion ?? "dev",
     rules: registry.checks.map((c) => ({ id: c.id, version: c.version })),
   };
@@ -89,7 +86,7 @@ export async function runChecks(options: RunOptions): Promise<RunReport> {
 
   const ctx: CheckContext = {
     batchId: source.batchId,
-    asOf,
+    today,
     units,
     statusSoFar,
     decisions,

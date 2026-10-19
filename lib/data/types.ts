@@ -69,9 +69,8 @@ export interface Snapshot {
   /** Rules of the run, in run order. */
   readonly rules: readonly RuleInfo[];
   readonly policies: CalcPolicies;
-  readonly asOf: CalendarDate;
-  /** `true`: no as-of date was given, the largest `updated_at` was taken. */
-  readonly asOfDefaulted: boolean;
+  /** Today in Bali: the day the checks and the reconciliation were run for. */
+  readonly today: CalendarDate;
   /** Properties of the source, sorted by id. */
   readonly properties: readonly PropertyInfo[];
   /** Clusters of the properties, sorted. */
@@ -88,5 +87,6 @@ export interface Snapshot {
 /** Where the rows come from: CSV at level 1, Supabase at level 2 (phase 7c). */
 export interface DataSource {
   readonly kind: SourceInfo["kind"];
-  snapshot(): Promise<Snapshot>;
+  /** The data checked as of `today` (Bali); one load and run per day. */
+  snapshot(today: CalendarDate): Promise<Snapshot>;
 }

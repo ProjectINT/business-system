@@ -4,7 +4,6 @@ export const DQ_ERROR_CODES = [
   "UNKNOWN_DEPENDENCY",
   "DEPENDENCY_CYCLE",
   "UNKNOWN_UNIT",
-  "NO_AS_OF",
 ] as const;
 
 export type DqErrorCode = (typeof DQ_ERROR_CODES)[number];

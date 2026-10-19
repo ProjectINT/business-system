@@ -9,7 +9,7 @@ export interface CalcPolicies {
   readonly reconciliationDate: "check_out" | "last_night";
   /**
    * When the payout is due: 'check_in' — the villa is paid in full before check-in (PLAN.md decision
-   * log 2026-10-18), so only a stay that has not started by the as-of date is `not_due`; 'check_out' — by the end of the stay.
+   * log 2026-10-18), so only a stay that has not started by today is `not_due`; 'check_out' — by the end of the stay.
    */
   readonly paymentDue: "check_in" | "check_out";
 }

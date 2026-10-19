@@ -99,7 +99,7 @@ export function calculateOverview(input: OverviewInput, scope: Scope, policies: 
       period: scope.period,
       includeReview: scope.includeReview,
       baseCurrency: scope.baseCurrency,
-      asOf: scope.asOf,
+      today: scope.today,
     },
     portfolio: summarize(...args, scope, policies),
     properties: propertyIds.map((propertyId) => ({

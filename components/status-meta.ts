@@ -45,7 +45,7 @@ export const RECONCILIATION_META: Record<ReconciliationStatus, { label: string; 
   underpaid: { label: "Underpaid", color: "warning", description: "Due, part of the payout received" },
   not_received: { label: "Not received", color: "danger", description: "Due, nothing received" },
   overpaid: { label: "Overpaid", color: "accent", description: "Received more than expected" },
-  not_due: { label: "Not due", color: "default", description: "Check-in after the as-of date" },
+  not_due: { label: "Not due", color: "default", description: "Check-in is still ahead" },
 };
 
 export const RECONCILIATION_ORDER: readonly ReconciliationStatus[] = [

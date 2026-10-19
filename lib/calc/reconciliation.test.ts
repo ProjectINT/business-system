@@ -35,11 +35,11 @@ describe("reconcileReservation", () => {
     ["nothing before check-in", [], "2026-09-19", "not_due"],
     ["check-in day itself is due", [], "2026-09-20", "not_received"],
     ["part paid during the stay", [999n], "2026-09-22", "underpaid"],
-  ])("%s → %s", (_, amounts, asOf, status) => {
+  ])("%s → %s", (_, amounts, today, status) => {
     const line = reconcileReservation(
       x,
       amounts.map((a, i) => pay(`P${i}`, "X0001", a)),
-      date(asOf),
+      date(today),
       DEFAULT_POLICIES,
     );
     expect(line.status).toBe(status);
@@ -79,7 +79,7 @@ describe("reconcile", () => {
 
   it("R0003: check_out → November, last_night → October", () => {
     const c = [calc(RES.R0003)];
-    expect(reconcile(c, [], scope({ period: NOVEMBER, asOf: date("2026-11-05") }), policies("check_out")).lines).toHaveLength(1);
+    expect(reconcile(c, [], scope({ period: NOVEMBER, today: date("2026-11-05") }), policies("check_out")).lines).toHaveLength(1);
     expect(reconcile(c, [], scope({ period: OCTOBER }), policies("check_out")).lines).toHaveLength(0);
     expect(reconcile(c, [], scope({ period: OCTOBER }), policies("last_night")).lines).toHaveLength(1);
     expect(reconcile(c, [], scope({ period: NOVEMBER }), policies("last_night")).lines).toHaveLength(0);

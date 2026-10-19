@@ -62,3 +62,10 @@ export function period(from: CalendarDate, to: CalendarDate): Period {
 export function inPeriod(p: Period, date: CalendarDate): boolean {
   return p.from <= date && date <= p.to;
 }
+
+/** The calendar date at `instant` in `timeZone` (IANA name), whatever the process time zone. */
+export function dateIn(instant: Date, timeZone: string): CalendarDate {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(instant);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)!.value;
+  return parseDate(`${part("year").padStart(4, "0")}-${part("month")}-${part("day")}`);
+}

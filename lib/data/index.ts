@@ -21,6 +21,7 @@ export {
 } from "./dashboard";
 export {
   BASE_CURRENCY,
+  TIME_ZONE,
   filterOptionsOf,
   parseFilters,
   periodPresets,

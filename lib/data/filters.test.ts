@@ -100,13 +100,13 @@ describe("selectedProperties and scopeOf", () => {
     expect(selectedProperties({ ...base, cluster: "Ubud", propertyIds: ["V001", "V002"] }, snapshot)).toEqual(new Set(["V002"]));
   });
 
-  it("scope of the calculator: period, properties, the switch, base currency, as-of", () => {
+  it("scope of the calculator: period, properties, the switch, base currency, today", () => {
     expect(scopeOf(base, snapshot)).toEqual({
       period: snapshot.range,
       propertyIds: "all",
       includeReview: true,
       baseCurrency: "IDR",
-      asOf: "2026-10-15",
+      today: "2026-10-15",
     });
     expect(scopeOf(base, snapshot, false).includeReview).toBe(false);
   });

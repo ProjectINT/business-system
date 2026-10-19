@@ -7,6 +7,9 @@ import type { Snapshot } from "./types";
 /** Every amount of the dashboard is in the villas' base currency. */
 export const BASE_CURRENCY: Currency = "IDR";
 
+/** The villas are in Bali: "today" is the date there (WITA, UTC+8), not on the server. */
+export const TIME_ZONE = "Asia/Makassar";
+
 export type SearchParams = Readonly<Record<string, string | string[] | undefined>>;
 
 export interface Filters extends FilterState {
@@ -102,7 +105,7 @@ export function scopeOf(filters: Filters, snapshot: Snapshot, includeReview: boo
     propertyIds: selectedProperties(filters, snapshot),
     includeReview,
     baseCurrency: BASE_CURRENCY,
-    asOf: snapshot.asOf,
+    today: snapshot.today,
   };
 }
 

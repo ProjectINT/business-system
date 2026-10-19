@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ENTITIES, loadDataset } from "../../ingest";
-import { datasetFrom, RESERVATION } from "../testing/fixture";
+import { datasetFrom } from "../testing/fixture";
 import { CSV_BATCH_ID, datasetSource } from "./dataset";
 
 describe("datasetSource on the sample files", () => {
@@ -42,10 +42,6 @@ describe("datasetSource on the sample files", () => {
     expect(Object.isFrozen(source.units("payment"))).toBe(true);
   });
 
-  it("defaults the as-of date to the largest updated_at: 2026-10-15 in the sample", () => {
-    expect(source.defaultAsOf()).toBe("2026-10-15");
-  });
-
   it("has nothing superseded at level 1", () => {
     expect(source.superseded()).toEqual([]);
   });
@@ -57,19 +53,5 @@ describe("datasetSource on small datasets", () => {
     expect(source.batchId).toBe("batch-7");
     expect(source.units("reservation")).toEqual([]);
     expect(source.units("file")).toHaveLength(5);
-  });
-
-  it("has no default as-of date without reservations or without parsable dates", () => {
-    expect(datasetSource(datasetFrom({})).defaultAsOf()).toBeNull();
-    const bad = datasetFrom({ reservation: [{ ...RESERVATION, updated_at: "yesterday" }] });
-    expect(datasetSource(bad).defaultAsOf()).toBeNull();
-    const mixed = datasetFrom({
-      reservation: [
-        { ...RESERVATION, updated_at: "2026-09-30" },
-        { ...RESERVATION, reservation_id: "R0002", updated_at: "" },
-        { ...RESERVATION, reservation_id: "R0003", updated_at: "2026-09-02" },
-      ],
-    });
-    expect(datasetSource(mixed).defaultAsOf()).toBe("2026-09-30");
   });
 });

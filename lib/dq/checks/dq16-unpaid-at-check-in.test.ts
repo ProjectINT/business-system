@@ -25,7 +25,7 @@ const ds = datasetFrom({
     { ...RESERVATION, reservation_id: "R0006", gross_booking_value: "1000", ota_fee: "2000" }, // nothing to pay (DQ-08 flags it)
     { ...RESERVATION, reservation_id: "R0007", property_id: "V002", currency: "USD" }, // unpaid, in USD
     { ...RESERVATION, reservation_id: "R0008", property_id: "V999" },
-  ]).concat([{ ...RESERVATION, reservation_id: "R0009", check_in: "2026-10-20", check_out: "2026-10-23" }]), // after the as-of date
+  ]).concat([{ ...RESERVATION, reservation_id: "R0009", check_in: "2026-10-20", check_out: "2026-10-23" }]), // check-in still ahead
   payment: [
     pay("P0001", "R0001", "2026-09-01"),
     pay("P0002", "R0002", "2026-09-06"),
@@ -60,12 +60,12 @@ describe("DQ-16", () => {
     expect(resultFor(report, "DQ-16", "R0007").amountIdr).toBeUndefined();
   });
 
-  it("skips cancellations, check-ins after the as-of date, rows already out; the as-of date moves the line", async () => {
+  it("skips cancellations, check-ins still ahead, rows already out; a later today moves the line", async () => {
     const report = await runOn(ds);
     expect(resultFor(report, "DQ-16", "R0004").reason).toBe("cancelled reservation");
-    expect(resultFor(report, "DQ-16", "R0009").reason).toBe("check-in after the as-of date");
+    expect(resultFor(report, "DQ-16", "R0009").reason).toBe("check-in is still ahead");
     expect(resultFor(report, "DQ-16", "R0008").reason).toBe("row excluded or duplicate by an earlier rule");
-    const later = await runOn(ds, { asOf: "2026-10-20" });
+    const later = await runOn(ds, { today: "2026-10-20" });
     expect(resultFor(later, "DQ-16", "R0009").outcome).toBe("fail");
   });
 

@@ -1,0 +1,93 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Финальное техническое задание — 2–3 часа</title><style>
+:root{--navy:#173449;--blue:#175d88;--bg:#f2f6f8;--ink:#192d3b;--muted:#597082;--line:#d6e1e8;--shade:#f5f8fa;--highlight:#f1f7fb}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif;line-height:1.62;color:var(--ink)}
+header{background:var(--navy);padding:30px max(24px,calc((100vw - 1120px)/2));color:white}
+header .eyebrow{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#adccd9;font-weight:700}header h1{font-size:29px;max-width:950px;line-height:1.22;margin:9px 0 8px}header .lead{margin:0;color:#dceaf1;font-size:14px}
+.layout{max-width:1190px;margin:0 auto;display:grid;grid-template-columns:214px minmax(0,1fr);gap:24px;padding:23px 14px 45px;align-items:start}
+nav{position:sticky;top:15px;border:1px solid var(--line);background:white;border-radius:12px;padding:15px 13px;max-height:calc(100vh - 32px);overflow-y:auto}
+nav strong{display:block;margin:2px 3px 9px;color:#455f71;font-size:12px;text-transform:uppercase;letter-spacing:.05em}nav a{display:block;padding:7px 9px;font-size:12px;color:#356077;text-decoration:none;border-radius:7px;line-height:1.4}nav a:hover{background:#eaf2f7}
+main{border:1px solid var(--line);background:white;padding:28px 33px 42px;border-radius:12px;box-shadow:0 3px 15px #20394e0b;min-width:0}
+h1,h2,h3{line-height:1.28;color:#153449}main h1{font-size:23px;margin-top:0}h2{font-size:20px;border-bottom:1px solid var(--line);margin:31px 0 13px;padding-bottom:9px;scroll-margin-top:20px}h3{font-size:15.5px;margin:24px 0 11px;scroll-margin-top:20px}
+p,li{font-size:13.5px}p{margin:10px 0 13px}li{margin:5px 0}strong{font-weight:700;color:#0f3147}a{color:var(--blue);overflow-wrap:anywhere}code{border-radius:4px;background:#ebf2f6;color:#244b60;padding:1px 5px;font-size:12px;overflow-wrap:anywhere}pre{background:#f3f6f8;border:1px solid #dce6ed;overflow:auto;padding:12px;border-radius:8px}
+blockquote{border-left:3px solid #4b87a8;background:#f2f7fa;margin:13px 0;padding:8px 16px;border-radius:0 7px 7px 0}blockquote p{margin:5px 0}
+table{border-collapse:collapse;width:100%;table-layout:fixed;max-width:100%;margin:16px 0 23px;font-size:12px}th,td{border:1px solid #d5e1e8;padding:9px 11px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}th{background:#e7f0f5;color:#234b62;font-weight:700}td:first-child,th:first-child{text-align:left}tbody tr:nth-child(2n){background:#f9fbfc}
+hr{border:0;border-top:1px solid var(--line);margin:28px 0}label{font-size:13px}input[type=checkbox]{accent-color:#2c7095}.tip{background:#eff6fa;padding:14px;border-radius:8px}
+.bottom{max-width:1190px;margin:0 auto 25px;color:#597182;font-size:12px;padding:0 20px}
+@media(max-width:940px){.layout{display:block;padding:0}nav{position:relative;border-radius:0;max-height:180px;border-left:0;border-right:0}main{border-radius:0;padding:24px 16px}table{display:block;overflow-x:auto;table-layout:auto}table tr{min-width:100%}th,td{min-width:80px}header{padding:22px 16px}.bottom{padding:12px}}
+@media print{body{background:white}.layout{display:block;padding:0}nav{display:none}header{background:white;color:#192d3b;padding:10px 0 15px;border-bottom:1px solid #ccc}header .eyebrow,header .lead{color:#516779}main{box-shadow:none;border:0;margin:0;padding:10px 0}table{font-size:10px}h2{break-after:avoid}tr{break-inside:avoid}.bottom{padding:0}}
+</style></head><body><header><div class="eyebrow">BLG / Рекрутинг · 23 октября 2026 · ДЛЯ КАНДИДАТА</div><h1>Финальное техническое задание — 2–3 часа</h1><p class="lead">Реальная финансовая логика на синтетических данных · 75 USD · один короткий пилот</p></header><div class="layout"><nav><strong>Разделы документа</strong><a href="#section-1">Финальное практическое задание · Senior Business Systems Engineer</a><a href="#section-2">1. Для чего это задание</a><a href="#section-3">2. Какие файлы находятся в архиве</a><a href="#section-4">3. Правила, которые считаем утверждёнными именно для теста</a><a href="#section-7">4. Что необходимо реализовать</a><a href="#section-9">5. Формат сдачи</a><a href="#section-10">6. Что будем проверять</a><a href="#section-11">7. Организационные условия</a></nav><main><h1 id="section-1">Финальное практическое задание · Senior Business Systems Engineer</h1>
+<p><strong>Тема:</strong> расчёт комиссий по ночам + защита от повторного импорта финансовых событий<br />
+<strong>Формат:</strong> ограниченная оплачиваемая доработка собственного предыдущего проекта либо небольшой адаптер к нему<br />
+<strong>Гонорар:</strong> <strong>75 USD за выполненную добросовестно попытку</strong> в согласованном объёме, независимо от числа набранных баллов<br />
+<strong>Время:</strong> целевой объём <strong>2–3 часа активной работы</strong>, не двухдневная разработка. Согласованный срок передачи результата — не ранее чем через 2 рабочих дня с момента выдачи, чтобы выбрать удобное время.<br />
+<strong>Содержание данных:</strong> полностью синтетические, не связанные с реальными виллами и банковскими счетами.</p>
+<h2 id="section-2">1. Для чего это задание</h2>
+<p>У нас есть уже выполненные тобой техническое задание и прототип. Просим <strong>не делать ещё один Dashboard и не переписывать систему с нуля</strong>. Нужно продемонстрировать небольшое, но важное изменение финансовой логики, которое корректно работает при изменении условий и при повторном импорте.</p>
+<p>Можно использовать любой стек и AI-assisted development. Код должен быть понятен тебе самому и запускаться по инструкции. UI, реальная PostgreSQL, подключение к Guesty, API-ключи, Docker, продакшн-деплой и идеальный дизайн <strong>не требуются</strong>.</p>
+<p>Время фиксировано как ограничение объёма: если не всё успеваешь, остановись, честно укажи оставшиеся пункты. Не нужно бесплатно работать сверх согласованного объёма.</p>
+<h2 id="section-3">2. Какие файлы находятся в архиве</h2>
+<ul>
+<li><code>case_public.json</code> — открытый исходный набор данных: две виллы, правила комиссии, бронирования, версии событий и платежи.</li>
+<li><code>output_schema.json</code> — желаемая форма результата (числа заменить фактическими).</li>
+<li><code>ТЗ_КАНДИДАТУ.html</code> и <code>ТЗ_КАНДИДАТУ.md</code> — те же правила в двух форматах.</li>
+</ul>
+<h2 id="section-4">3. Правила, которые считаем утверждёнными именно для теста</h2>
+<h3 id="section-5">Денежная модель</h3>
+<ol>
+<li>Все корректные денежные суммы — <strong>целые индонезийские рупии (IDR)</strong>. Не конвертируй валюту по самостоятельно подобранному курсу. В тесте <code>accommodation_gross_idr</code> — стоимость проживания <strong>без PBJT</strong>.</li>
+<li><code>pbjt_idr</code> — отдельное обязательство перед государством по условию упражнения: <strong>не доход компании и не доход собственника</strong>. Здесь PBJT задаётся отдельным полем; его ставка не вычисляется заново.</li>
+<li><code>ota_fee_idr</code> — комиссия канала. Для прямых бронирований в тесте она равна нулю. OTA перечисляет сумму <strong>проживание + PBJT − OTA fee</strong>; не вычитай OTA fee из фактического банковского платежа второй раз.</li>
+<li>Комиссия управляющей компании начисляется на <strong>стоимость проживания без PBJT</strong>, по ставке каждой соответствующей ночи. Ставка берётся из <code>commission_rules</code>, где <code>rate_bps</code> — базисные пункты (<code>1700</code> = 17%). Интервал <code>effective_from</code>—<code>effective_to</code> включителен.</li>
+<li>Проживание делится на ночи: <strong>check-in включается, check-out исключается</strong>. Для каждого полного бронирования <code>accommodation_gross_idr</code>, <code>pbjt_idr</code> и <code>ota_fee_idr</code> распределяются целыми рупиями по ночам. Если есть остаток от деления, по одной рупии добавляется к первым ночам в хронологическом порядке.</li>
+<li>Комиссия УК округляется <strong>отдельно по каждой ночи</strong> до целой рупии правилом <code>HALF_UP</code>. Для неотрицательных сумм можно использовать <code>(night_amount * rate_bps + 5000) // 10000</code>.</li>
+<li>Начисления относятся к календарному месяцу <strong>по ночам проживания</strong>. Денежные поступления относятся к месяцу <strong>по <code>payment_date</code></strong>. Аванс, полученный в ноябре за декабрь, — ноябрьские деньги, но декабрьское начисление.</li>
+<li><code>owner_estimate_idr</code> — <strong>условная оценка результата собственника до расходов и выплат</strong>: <code>accommodation_gross_idr − ota_fee_idr − management_fee_idr</code>. Это <strong>не</strong> обязательство к выплате и не банковский остаток. В тесте сознательно нет расходов собственника, начальных сальдо, owner payouts, PPN или банковских комиссий.</li>
+</ol>
+<h3 id="section-6">Обновления, дубли и ошибки</h3>
+<ol start="9">
+<li>Источник может прислать точно одно и то же событие бронирования повторно. Два события с одинаковым <code>source_event_id</code> и одинаковым содержанием должны учитываться <strong>один раз</strong>.</li>
+<li>Бронирование может иметь новую версию с прежним <code>reservation_id</code>, но новым <code>source_event_id</code> и более поздним <code>updated_at</code>. В расчёте используется <strong>последний полный снимок</strong> бронирования, а старую версию нужно сохранить или хотя бы отразить в диагностике. Нельзя суммировать обе версии как две брони.</li>
+<li>Повтор одного платежа с тем же <code>payment_id</code> и идентичным содержанием не удваивает <code>cash_received_idr</code>. Платежи со статусом <code>pending</code> не относятся к полученным деньгам.</li>
+<li>Если у бронирования валюта <code>USD</code>, а у виллы базовая <code>IDR</code>, запись <strong>не включается</strong> в подтверждённые IDR-начисления без утверждённого FX-курса. Нужна запись об ошибке с кодом <code>CURRENCY_MISMATCH</code>.</li>
+<li>Полученный платёж, привязанный к отсутствующему <code>reservation_id</code>, не должен теряться и не должен автоматически считаться доходом подтверждённой виллы. Показать отдельно как <code>cash_unmatched_idr</code> и зафиксировать исключение <code>UNMATCHED_PAYMENT</code>.</li>
+<li>Если на незнакомом наборе данных обнаружены неоднозначные одинаково датированные версии, незнакомая вилла или отсутствие действующей ставки, не придумывай правило: пометь запись как требующую проверки. Не требуется строить полнофункциональный интерфейс разрешения конфликтов.</li>
+</ol>
+<h2 id="section-7">4. Что необходимо реализовать</h2>
+<p><strong>A. Помесячные финансовые результаты.</strong> Для <code>2026-11</code>, <code>2026-12</code> и всего периода рассчитать <code>accommodation_gross_idr</code>, <code>pbjt_liability_idr</code>, <code>ota_fee_idr</code>, <code>management_fee_idr</code>, <code>owner_estimate_idr</code>, <code>cash_received_idr</code>. Сделать те же показатели по каждой вилле. Показать, что одна бронь может давать начисление в двух месяцах.</p>
+<p><strong>B. Корректная смена ставки.</strong> Для брони, пересекающей ноябрь и декабрь, ставка 17% применяется только к ноябрьским ночам, ставка 20% — только к декабрьским. Применение одной ставки на всю бронь считается ошибкой.</p>
+<p><strong>C. Повторные события и платежи.</strong> Отбросить точные дубли, выбрать актуальный снимок брони, не задвоить поступления. Показать <code>dedup</code> и трассировку решения по R101.</p>
+<p><strong>D. Прозрачность ошибок.</strong> Вывести <code>exceptions</code> и <code>cash_unmatched_idr</code>; не включать ошибочную USD-бронь в IDR-итог и не прятать неподтверждённые деньги.</p>
+<p><strong>E. Воспроизводимость.</strong> Предоставить запуск <strong>на другом JSON того же формата</strong> (там могут измениться ставки и версии бронирования). Можно реализовать CLI-скрипт, принимающий путь к входному JSON и создающий путь к выходному JSON. Подойдут Python, Go, Node.js или другая привычная технология. Если CLI трудно встраивается в старый проект, можно сделать маленький отдельный адаптер и пояснить, как его встроить в текущую архитектуру.</p>
+<p><strong>F. Проверки.</strong> Добавить хотя бы два содержательных автоматических теста: один на смену ставки в середине проживания и один на дублирование платежа / повторную версию брони.</p>
+<h3 id="section-8">Открытая контрольная арифметика</h3>
+<p>В <code>case_public.json</code> у брони <code>R101</code> актуальная версия — <code>E_R101_V2</code>: 4 ночи с 29 ноября по 3 декабря; проживание 4 400 000 IDR, PBJT 440 000 IDR, OTA fee 660 000 IDR. Значит, стоимость одной ночи составляет 1 100 000 IDR.</p>
+<ul>
+<li>Две ноябрьские ночи: комиссия 17% × 1 100 000 × 2 = <strong>374 000 IDR</strong>.</li>
+<li>Две декабрьские ночи: комиссия 20% × 1 100 000 × 2 = <strong>440 000 IDR</strong>.</li>
+<li>Итого комиссия УК для R101: <strong>814 000 IDR</strong>.</li>
+<li>У R101 деньги от OTA приходят в <strong>декабре</strong>, несмотря на ноябрьское начисление.</li>
+<li>У брони R202 аванс получен в <strong>ноябре</strong>, а проживание происходит в <strong>декабре</strong>.</li>
+</ul>
+<p>Эти примеры приведены для однозначности методологии. Остальные ответы и дополнительные варианты входных данных нужно рассчитать самостоятельно.</p>
+<h2 id="section-9">5. Формат сдачи</h2>
+<p>Обязательные материалы:</p>
+<ol>
+<li>Код: GitHub-репозиторий, коммит или ZIP. Достаточно отдельного модуля и небольшого README, если общий проект большой.</li>
+<li><code>results_public.json</code> по схеме <code>output_schema.json</code> с корректными числовыми значениями.</li>
+<li>Инструкция запуска: одна команда или 2–3 коротких шага. Пример: <code>python run.py case_public.json results_public.json</code>.</li>
+<li>Автоматические тесты и инструкция их запуска, желательно с результатом исполнения.</li>
+<li><code>IMPLEMENTATION_NOTES.md</code> (до одной страницы): что уже было готово раньше, что изменил сейчас, как обеспечить повторный импорт и как перенести решение в PostgreSQL без отключения старых Google Sheets.</li>
+</ol>
+<p>Тебе не нужно создавать «красивый Dashboard». <strong>Главное — достоверные расчёты, воспроизводимый результат и понятные инженерные решения.</strong></p>
+<h2 id="section-10">6. Что будем проверять</h2>
+<p>На внутренней стороне данные будут изменены по той же схеме: например, ставка 20% может стать 22%, или появится более свежая версия брони. Твой код должен пересчитать результат без ручного редактирования итогового JSON. Общее направление проверки раскрыто заранее; конкретные контрольные значения — нет.</p>
+<p>Разрешается пользоваться AI, но важно уметь самостоятельно объяснить логику. Повторного большого задания после этого этапа не планируется: финальная беседа — только защита уже выполненной работы.</p>
+<h2 id="section-11">7. Организационные условия</h2>
+<ul>
+<li>Вознаграждение: <strong>75 USD</strong> за добросовестное выполнение согласованного объёма, даже если результат содержит ошибки. Порядок оплаты и реквизиты согласовываются отдельно до начала.</li>
+<li>Ограничение усилий: <strong>2–3 часа</strong>. Если объективно нужен больший объём, сообщи, что осталось, и остановись. Без предварительного согласования мы не ожидаем бесплатных доработок.</li>
+<li>Срок сдачи: укажите удобное двухдневное окно после получения задания; сама работа не предполагает 2 дня занятости.</li>
+<li>Никаких реальных финансовых данных, документов собственников, банковских доступов или ключей Guesty передавать не нужно.</li>
+</ul>
+<p>Контакт по организационным вопросам — Ирина HR. По неоднозначностям методологии вопросы собирает Ирина и рассылает единое письменное уточнение всем кандидатам.</p>
+</main></div><div class="bottom">Документ содержит условия конкретного тестового сценария, не налоговую или юридическую консультацию. Все контрольные данные синтетические.</div></body></html>

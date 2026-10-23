@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "case_id": "FINAL_VILLA_2026_PUBLIC_A",
+  "monthly": {
+    "2026-11": {"accommodation_gross_idr": 0, "pbjt_liability_idr": 0, "ota_fee_idr": 0, "management_fee_idr": 0, "owner_estimate_idr": 0, "cash_received_idr": 0},
+    "2026-12": {"accommodation_gross_idr": 0, "pbjt_liability_idr": 0, "ota_fee_idr": 0, "management_fee_idr": 0, "owner_estimate_idr": 0, "cash_received_idr": 0}
+  },
+  "total": {"accommodation_gross_idr": 0, "pbjt_liability_idr": 0, "ota_fee_idr": 0, "management_fee_idr": 0, "owner_estimate_idr": 0, "cash_received_idr": 0},
+  "by_property": {"V01": {"2026-11": {}, "2026-12": {}}, "V02": {"2026-11": {}, "2026-12": {}}},
+  "cash_unmatched_idr": 0,
+  "cash_held_idr": 0,
+  "dedup": {"reservation_event_duplicates": 0, "superseded_reservation_versions": 0, "payment_duplicates": 0},
+  "exceptions": [{"record_type": "reservation", "record_id": "example", "code": "example", "action": "hold"}],
+  "trace": {"R101": {"selected_source_event_id": "example", "nights": 0, "monthly": {}}}
+}

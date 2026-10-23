@@ -10,7 +10,7 @@ export default defineConfig({
     setupFiles: ["lib/calc/testing/setup.ts"],
     coverage: {
       provider: "v8",
-      include: ["lib/calc/**/*.ts", "lib/ingest/**/*.ts", "lib/dq/**/*.ts", "lib/data/**/*.ts"],
+      include: ["lib/calc/**/*.ts", "lib/ingest/**/*.ts", "lib/dq/**/*.ts", "lib/data/**/*.ts", "lib/nightly/**/*.ts"],
       exclude: [
         "lib/calc/**/*.test.ts",
         "lib/calc/testing/**",
@@ -27,6 +27,10 @@ export default defineConfig({
         "lib/data/testing/**",
         "lib/data/index.ts",
         "lib/data/types.ts",
+        "lib/nightly/**/*.test.ts",
+        "lib/nightly/testing/**",
+        "lib/nightly/index.ts",
+        "lib/nightly/types.ts",
       ],
       thresholds: { 100: true },
     },

@@ -14,6 +14,28 @@ npm i
 npm run dev        # http://localhost:3000
 ```
 
+## Финальное задание
+
+Комиссия по ночам и защита от повторного импорта ([ТЗ](final-test/ТЗ_КАНДИДАТУ.md), [план](docs/FINAL_TEST_PLAN.md), [IMPLEMENTATION_NOTES.md](IMPLEMENTATION_NOTES.md)). Отдельный модуль `lib/nightly/` и CLI; дашборд и ядро расчётов не затронуты.
+
+```bash
+npm i
+npm run nightly -- final-test/case_public.json final-test/results_public.json
+npm test
+```
+
+CLI печатает одну строку: `final-test/results_public.json: FINAL_VILLA_2026_PUBLIC_A, exceptions 3, dedup 1/1/1 (events/versions/payments)`. Другой JSON того же формата — те же два пути. При ошибке формата код выхода 1, в stderr путь к полю, файл результата не пишется.
+
+Вывод `npm test` (vitest 5, Node 24):
+
+```
+ Test Files  76 passed (76)
+      Tests  771 passed (771)
+   Duration  2.70s
+```
+
+Из них 147 — тесты модуля (`npx vitest run lib/nightly`): смена ставки в середине проживания (F1), дубли платежа и версии брони (F2), инвариант «Σ ночей = сумма брони» на случайных данных, golden по `case_public.json`, тест E на изменённом кейсе (ставка 2200, новая версия R101) и сверка вывода CLI с `results_public.json` байт в байт.
+
 ## 2. Финансовая методология
 
 Полная спецификация — [PLAN.md, 7](docs/PLAN.md#7-финансовая-методология) и [CALCULATION_MODULE.md](docs/CALCULATION_MODULE.md). Все решения с датами и причинами — в журнале [PLAN.md, 15](docs/PLAN.md#15-журнал-решений).
@@ -497,8 +519,10 @@ flowchart LR
 │  ├─ dq/                      контракт проверки, раннер, 23 правила, случаи, журнал
 │  ├─ calc/                    финансовый движок на bigint, политики
 │  ├─ data/                    строки + статусы → вход расчёта; источник CSV
+│  ├─ nightly/                 финальное задание: снимки броней, комиссия по ночам, отчёт
 │  └─ mock/                    демонстрационные данные страницы /import
-├─ scripts/                    npm run dq, анализ пересечений
+├─ scripts/                    npm run dq, npm run nightly, анализ пересечений
+├─ final-test/                 ТЗ финального задания, case_public.json, results_public.json
 ├─ supabase/                   схема базы уровня 2 и миграция
 └─ docs/                       планы и спецификации
 ```
@@ -508,4 +532,5 @@ flowchart LR
 - [ROADMAP.md](docs/ROADMAP.md) — порядок работ по фазам и что сделано в каждой;
 - [CALCULATION_MODULE.md](docs/CALCULATION_MODULE.md) — модуль расчётов: деньги, округление, распределение, тесты;
 - [VALIDATION_PLAN.md](docs/VALIDATION_PLAN.md) — модуль проверок: контракт, журнал, каталог правил, разбор случаев;
-- [IMPORT_PLAN.md](docs/IMPORT_PLAN.md) — импорт уровня 2: пачки, сырые строки, staging, очередь.
+- [IMPORT_PLAN.md](docs/IMPORT_PLAN.md) — импорт уровня 2: пачки, сырые строки, staging, очередь;
+- [FINAL_TEST_PLAN.md](docs/FINAL_TEST_PLAN.md) — финальное задание: адаптер `lib/nightly`, решения по неоднозначностям, контрольные числа, время.

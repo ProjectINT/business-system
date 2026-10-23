@@ -32,3 +32,28 @@ export function exceedsShare(part: Money, whole: Money, rate: Rate): boolean {
   assertSameCurrency(part, whole);
   return part.amount * rate.den > whole.amount * rate.num;
 }
+
+const BPS_DEN = 10000n;
+
+/**
+ * Basis points as the final test gives them:
+ * 1700 → 17/100 (the same value parseRate("0.17") returns).
+ * 0 ≤ bps ≤ 10000; a number must be a safe integer.
+ * Trailing zeros are reduced so equal rates compare equal.
+ */
+export function rateFromBps(bps: bigint | number): Rate {
+  if (typeof bps === "number" && !Number.isSafeInteger(bps)) {
+    throw new CalcError("INVALID_RATE", `Not an integer number of basis points: ${bps}`, { bps: String(bps) });
+  }
+  const n = BigInt(bps);
+  if (n < 0n || n > BPS_DEN) {
+    throw new CalcError("INVALID_RATE", `Basis points outside [0, 10000]: ${n}`, { bps: n.toString() });
+  }
+  let num = n;
+  let den = BPS_DEN;
+  while (den > 1n && num % 10n === 0n) {
+    num /= 10n;
+    den /= 10n;
+  }
+  return { num, den };
+}

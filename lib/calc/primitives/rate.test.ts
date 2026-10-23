@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { expectCode } from "../testing/expect";
 import { idr, money } from "./money";
-import { applyRate, exceedsShare, parseRate, rateToString } from "./rate";
+import { applyRate, exceedsShare, parseRate, rateFromBps, rateToString } from "./rate";
 
 describe("parseRate", () => {
   it.each<[string, bigint, bigint]>([
@@ -67,5 +67,47 @@ describe("exceedsShare", () => {
     expect(exceedsShare(idr(26n), idr(100n), parseRate("0.25"))).toBe(true);
     expect(exceedsShare(idr(25n), idr(100n), parseRate("0.25"))).toBe(false);
     expectCode(() => exceedsShare(idr(1n), money(1n, "USD"), parseRate("0.25")), "CURRENCY_MISMATCH");
+  });
+});
+
+describe("rateFromBps", () => {
+  it.each<[bigint | number, bigint, bigint]>([
+    [1700n, 17n, 100n],
+    [2000n, 2n, 10n],
+    [1000n, 1n, 10n],
+    [725n, 725n, 10000n],
+    [1n, 1n, 10000n],
+    [0n, 0n, 1n],
+    [10000n, 1n, 1n],
+    [1700, 17n, 100n],
+    [0, 0n, 1n],
+    [10000, 1n, 1n],
+  ])("%s bps → %s/%s", (bps, num, den) => expect(rateFromBps(bps)).toEqual({ num, den }));
+
+  it("gives the same Rate as parseRate", () => {
+    expect(rateFromBps(1700n)).toEqual(parseRate("0.17"));
+    expect(rateFromBps(2000n)).toEqual(parseRate("0.2"));
+    expect(rateFromBps(725n)).toEqual(parseRate("0.0725"));
+    expect(rateFromBps(0n)).toEqual(parseRate("0"));
+    expect(rateToString(rateFromBps(10000n))).toBe("1");
+  });
+
+  it.each<bigint | number>([-1n, 10001n, -1, 10001, 17.5, 0.17, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
+    "%s → INVALID_RATE",
+    (bps) => expectCode(() => rateFromBps(bps), "INVALID_RATE"),
+  );
+
+  it("one night of R101: 1 100 000 × 1700 bps = 187 000, × 2000 bps = 220 000", () => {
+    expect(applyRate(idr(1_100_000n), rateFromBps(1700n), "half-up")).toEqual(idr(187_000n));
+    expect(applyRate(idr(1_100_000n), rateFromBps(2000n), "half-up")).toEqual(idr(220_000n));
+  });
+
+  it("applyRate half-up equals the test's formula (amount × bps + 5000) // 10000 for non-negative amounts", () => {
+    fc.assert(
+      fc.property(fc.bigInt({ min: 0n, max: 10n ** 15n }), fc.integer({ min: 0, max: 10000 }), (amount, bps) => {
+        const expected = (amount * BigInt(bps) + 5000n) / 10000n;
+        expect(applyRate(idr(amount), rateFromBps(bps), "half-up").amount).toBe(expected);
+      }),
+    );
   });
 });

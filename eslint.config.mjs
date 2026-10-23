@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
       "lib/data/**/*.test.ts",
       "lib/data/testing/**",
       "lib/nightly/**/*.test.ts",
+      "lib/nightly/testing/**",
     ],
     rules: {
       "no-restricted-globals": ["error", "parseFloat", "parseInt", "isNaN", "isFinite"],

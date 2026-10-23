@@ -36,6 +36,8 @@ CLI печатает одну строку: `final-test/results_public.json: FIN
 
 Из них 147 — тесты модуля (`npx vitest run lib/nightly`): смена ставки в середине проживания (F1), дубли платежа и версии брони (F2), инвариант «Σ ночей = сумма брони» на случайных данных, golden по `case_public.json`, тест E на изменённом кейсе (ставка 2200, новая версия R101) и сверка вывода CLI с `results_public.json` байт в байт.
 
+Архив для запуска без репозитория: `npm run nightly:pack` собирает `dist/nightly-cli.zip` — один файл `nightly.mjs` (CLI, `lib/nightly`, примитивы `lib/calc` и zod, собрано esbuild), файлы задания, `results_public.json`, `IMPLEMENTATION_NOTES.md` и README с инструкцией. Проверяющий распаковывает и выполняет `node nightly.mjs case_public.json results_public.json`; нужен только Node 22+. Скрипт сам распаковывает архив во временную папку и сверяет результат с `final-test/results_public.json`.
+
 ## 2. Финансовая методология
 
 Полная спецификация — [PLAN.md, 7](docs/PLAN.md#7-финансовая-методология) и [CALCULATION_MODULE.md](docs/CALCULATION_MODULE.md). Все решения с датами и причинами — в журнале [PLAN.md, 15](docs/PLAN.md#15-журнал-решений).

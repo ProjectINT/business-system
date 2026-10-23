@@ -1,11 +1,16 @@
-// Reservation events → one snapshot per reservation (latest updated_at), payments without duplicates,
-// dedup counters and exceptions (docs/FINAL_TEST_PLAN.md, 3.1).
+// Reservation events → one snapshot per reservation (latest updated_at) with its night lines,
+// payments without duplicates, dedup counters and exceptions (docs/FINAL_TEST_PLAN.md, 3.1).
+//
+// The night lines (fees.ts) are built here, right after the checks of the snapshot: a night without
+// a rule holds the reservation, and payments are placed only after every hold is known, so such a
+// reservation's payment is held (PAYMENT_HELD), not counted as the villa's cash.
 //
 // Only the input decides the result: records are grouped by their ids, a tie between equal versions
 // goes to the smaller source_event_id, and every list is sorted by its key — a reordered input gives
 // the same output. Content is compared on the parsed record, so an unknown extra field or another
 // spelling of the same instant does not make two copies differ.
-import type { CaseInput, Payment, Property, ReservationEvent } from "./schema";
+import { nightLines, type NightLine } from "./fees";
+import type { CaseInput, CommissionRule, Payment, Property, ReservationEvent } from "./schema";
 import type { Dedup, Exception, ExceptionCode } from "./types";
 
 /** The latest version of a reservation, or why none can be used. `hold` — nothing of it enters the confirmed totals. */
@@ -16,6 +21,8 @@ export type ReservationDecision =
       readonly snapshot: ReservationEvent;
       /** source_event_ids of the versions the snapshot replaced, sorted. */
       readonly superseded: readonly string[];
+      /** One line per night of the stay, chronological (fees.ts). */
+      readonly nights: readonly NightLine[];
     }
   | {
       readonly hold: true;
@@ -100,7 +107,8 @@ function decideReservation(
   versions: readonly ReservationEvent[],
   conflicted: boolean,
   properties: ReadonlyMap<string, Property>,
-): { decision: ReservationDecision; codes: ExceptionCode[] } {
+  rules: readonly CommissionRule[],
+): { decision: ReservationDecision; codes: readonly ExceptionCode[] } {
   if (conflicted) {
     return { decision: { hold: true, reservation_id, snapshot: null, superseded: [] }, codes: ["CONFLICTING_EVENT"] };
   }
@@ -116,11 +124,11 @@ function decideReservation(
   const snapshot = sorted[0]!;
   const superseded = sourceEventIds([...older, ...sorted.slice(1)]);
   const codes = checkSnapshot(snapshot, properties);
-  const decision: ReservationDecision =
-    codes.length === 0
-      ? { hold: false, reservation_id, snapshot, superseded }
-      : { hold: true, reservation_id, snapshot, superseded };
-  return { decision, codes };
+  if (codes.length > 0) return { decision: { hold: true, reservation_id, snapshot, superseded }, codes };
+  // The snapshot is sound; now every night needs exactly one rule (plan 3.2).
+  const fees = nightLines(snapshot, rules);
+  if (fees.hold) return { decision: { hold: true, reservation_id, snapshot, superseded }, codes: fees.codes };
+  return { decision: { hold: false, reservation_id, snapshot, superseded, nights: fees.nights }, codes: [] };
 }
 
 function decidePayment(
@@ -151,7 +159,7 @@ export function selectSnapshots(input: CaseInput): Snapshots {
     }
   }
 
-  // 2. The latest version of each reservation (ТЗ 10), then the checks of that snapshot.
+  // 2. The latest version of each reservation (ТЗ 10), the checks of that snapshot, its night lines.
   const properties = new Map(input.properties.map((p) => [p.property_id, p]));
   const byReservation = groupBy(versions, (e) => e.reservation_id);
   const reservationIds = [...new Set([...byReservation.keys(), ...conflicted])].sort(compareStrings);
@@ -162,6 +170,7 @@ export function selectSnapshots(input: CaseInput): Snapshots {
       byReservation.get(reservation_id) ?? [],
       conflicted.has(reservation_id),
       properties,
+      input.commission_rules,
     );
     reservations.push(decision);
     dedup.superseded_reservation_versions += decision.superseded.length;

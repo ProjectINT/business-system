@@ -33,6 +33,24 @@ describe("selectSnapshots on case_public.json (plan, phase 1)", () => {
     expect(chosen(s, "R303")).toEqual({ hold: true, selected: "E_R303", superseded: [] });
   });
 
+  it("carries the night lines of each accepted reservation", () => {
+    const nights = (reservation_id: string) => {
+      const r = s.reservations.find((x) => x.reservation_id === reservation_id);
+      return r !== undefined && !r.hold ? r.nights.map((n) => [n.night, n.rate_bps, n.management_fee_idr]) : null;
+    };
+    expect(nights("R101")).toEqual([
+      ["2026-11-29", 1700, 187_000n],
+      ["2026-11-30", 1700, 187_000n],
+      ["2026-12-01", 2000, 220_000n],
+      ["2026-12-02", 2000, 220_000n],
+    ]);
+    expect(nights("R202")).toEqual([
+      ["2026-12-10", 1000, 100_000n],
+      ["2026-12-11", 1000, 100_000n],
+    ]);
+    expect(nights("R303")).toBeNull();
+  });
+
   it("counts dedup 1 / 1 / 1", () => {
     expect(s.dedup).toEqual({
       reservation_event_duplicates: 1,
@@ -187,6 +205,18 @@ describe("checks of the chosen snapshot", () => {
       "reservation R101 INVALID_STAY",
       "reservation R101 UNKNOWN_STATUS",
     ]);
+  });
+
+  it("a night without a rule holds the reservation, and its payment with it", () => {
+    const commission_rules = [{ property_id: "V01", effective_from: "2026-11-01", effective_to: "2026-11-30", rate_bps: 1700 }];
+    const s = run([rawEvent()], [rawPayment()], { commission_rules });
+    expect(chosen(s, "R101")).toEqual({ hold: true, selected: "E_R101_V2", superseded: [] });
+    expect(s.payments.map((p) => p.bucket)).toEqual(["held"]);
+    expect(codes(s)).toEqual(["reservation R101 NO_COMMISSION_RULE", "payment P101 PAYMENT_HELD"]);
+  });
+
+  it("the rules are checked only on a sound snapshot: a USD booking without rules reports CURRENCY_MISMATCH alone", () => {
+    expect(codes(run([rawEvent({ currency: "USD" })], [], { commission_rules: [] }))).toEqual(["reservation R101 CURRENCY_MISMATCH"]);
   });
 
   it("checks only the latest version: a corrected booking after a USD one is accepted", () => {

@@ -1,6 +1,6 @@
 # План: комиссия по ночам и защита от повторного импорта
 
-Финальное задание ([ТЗ](../final-test/ТЗ_КАНДИДАТУ.md)). Статус: v1.1 от 2026-10-23 — решения раздела 4 приняты Юрием, фаза 0 выполнена. Бюджет ТЗ — 2–3 часа активной работы; план рассчитан на **2 ч 40 мин**. Таблица факта — раздел 8.
+Финальное задание ([ТЗ](../final-test/ТЗ_КАНДИДАТУ.md)). Статус: v1.2 от 2026-10-23 — решения раздела 4 приняты Юрием, фазы 0–2 выполнены. Бюджет ТЗ — 2–3 часа активной работы; план рассчитан на **2 ч 40 мин**. Таблица факта — раздел 8.
 
 ## 1. Вывод
 
@@ -30,7 +30,7 @@
 | `lib/calc/primitives/rounding.ts` | `roundDiv('half-up')` | HALF_UP ТЗ для неотрицательных сумм совпадает с «половина от нуля» |
 | `lib/calc/primitives/allocate.ts` | `allocate(total, n)` | п. 5 ТЗ дословно: поровну, остаток по одной рупии первым ночам |
 | `lib/calc/primitives/calendar.ts` | `parseDate`, `eachNight`, `nightsBetween` | `[check_in, check_out)`; месяц ночи — первые 7 символов даты |
-| `lib/calc/commission.ts` | `commissionRulesOn` | все правила виллы на дату ночи; `effective_to` включительно, как в ТЗ |
+| `lib/calc/commission.ts` | `commissionRulesOn` — **не взяли** | она типизирована под `CommissionRuleInput` (camelCase, `rate`, `feeBasis`); перевод правил туда и обратно ради трёхстрочного фильтра длиннее самого фильтра. В `fees.ts` свой `rulesOn` с тем же чтением: `effective_to` включительно, `null` — без конца; границы закрыты тестом |
 | `lib/calc/view.ts` | `toView` | единственное место `bigint → number` для итогового JSON |
 | `lib/calc/testing/setup.ts`, `fast-check` | конфигурация property-тестов | инвариант «сумма ночей = сумма брони» |
 | `scripts/dq.ts` | образец CLI на `tsx` с `parseArgs` | CLI той же формы |
@@ -78,7 +78,9 @@ IMPLEMENTATION_NOTES.md          до одной страницы, корень 
 
 ### 3.2 Комиссия по ночам (`fees.ts`)
 
-На снимок: `nights = nightsBetween`; `allocate(accommodation, nights)`, `allocate(pbjt, nights)`, `allocate(ota_fee, nights)`; на каждую ночь ровно одно правило из `commissionRulesOn(rules, property, night)` (0 → `NO_COMMISSION_RULE`, >1 → `AMBIGUOUS_COMMISSION_RULE`, оба `hold` на всю бронь); `fee = applyRate(nightGross, rateFromBps(bps), 'half-up')`. Строка ночи: дата, месяц, суммы, `rate_bps`, комиссия.
+На снимок: `nights = eachNight(check_in, check_out)`; `allocate(accommodation, nights)`, `allocate(pbjt, nights)`, `allocate(ota_fee, nights)`; на каждую ночь ровно одно правило виллы, действующее в эту дату (0 → `NO_COMMISSION_RULE`, >1 → `AMBIGUOUS_COMMISSION_RULE`, оба `hold` на всю бронь; коды в порядке ночей, каждый один раз); `fee = applyRate(nightGross, rateFromBps(bps), 'half-up')`. Строка ночи: дата, месяц, три суммы, `rate_bps`, комиссия.
+
+`nightLines` вызывается из `selectSnapshots` сразу после проверок снимка и **до** размещения платежей: иначе платёж брони, задержанной из-за ставки, уже лежал бы в `cash_received`, а по решению 4.3 ему место в `cash_held` (`PAYMENT_HELD`). Принятое решение по брони несёт свои строки ночей (`nights`), отчёту остаётся их сложить.
 
 ### 3.3 Отчёт (`report.ts`)
 
@@ -192,7 +194,7 @@ IMPLEMENTATION_NOTES.md          до одной страницы, корень 
 |---|--:|--:|---|
 | 0. Каркас | 15 мин | 45 мин, из них ~20 — решения раздела 4 | |
 | 1. Схема и снимки | 30 мин | | |
-| 2. Комиссия по ночам | 35 мин | | |
+| 2. Комиссия по ночам | 35 мин | 10 мин | |
 | 3. Отчёт и golden | 30 мин | | |
 | 4. CLI | 20 мин | | |
 | 5. Документы | 30 мин | | |

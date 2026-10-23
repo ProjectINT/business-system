@@ -1,0 +1,146 @@
+{
+  "by_property": {
+    "V01": {
+      "2026-11": {
+        "accommodation_gross_idr": 2200000,
+        "cash_received_idr": 0,
+        "management_fee_idr": 374000,
+        "ota_fee_idr": 330000,
+        "owner_estimate_idr": 1496000,
+        "pbjt_liability_idr": 220000
+      },
+      "2026-12": {
+        "accommodation_gross_idr": 2200000,
+        "cash_received_idr": 4180000,
+        "management_fee_idr": 440000,
+        "ota_fee_idr": 330000,
+        "owner_estimate_idr": 1430000,
+        "pbjt_liability_idr": 220000
+      }
+    },
+    "V02": {
+      "2026-11": {
+        "accommodation_gross_idr": 0,
+        "cash_received_idr": 2200000,
+        "management_fee_idr": 0,
+        "ota_fee_idr": 0,
+        "owner_estimate_idr": 0,
+        "pbjt_liability_idr": 0
+      },
+      "2026-12": {
+        "accommodation_gross_idr": 2000000,
+        "cash_received_idr": 0,
+        "management_fee_idr": 200000,
+        "ota_fee_idr": 0,
+        "owner_estimate_idr": 1800000,
+        "pbjt_liability_idr": 200000
+      }
+    }
+  },
+  "case_id": "FINAL_VILLA_2026_PUBLIC_A",
+  "cash_held_idr": 50000,
+  "cash_unmatched_idr": 100000,
+  "dedup": {
+    "payment_duplicates": 1,
+    "reservation_event_duplicates": 1,
+    "superseded_reservation_versions": 1
+  },
+  "exceptions": [
+    {
+      "action": "hold",
+      "code": "CURRENCY_MISMATCH",
+      "record_id": "R303",
+      "record_type": "reservation"
+    },
+    {
+      "action": "hold",
+      "code": "PENDING_PAYMENT",
+      "record_id": "P303",
+      "record_type": "payment"
+    },
+    {
+      "action": "hold",
+      "code": "UNMATCHED_PAYMENT",
+      "record_id": "P404",
+      "record_type": "payment"
+    }
+  ],
+  "monthly": {
+    "2026-11": {
+      "accommodation_gross_idr": 2200000,
+      "cash_received_idr": 2200000,
+      "management_fee_idr": 374000,
+      "ota_fee_idr": 330000,
+      "owner_estimate_idr": 1496000,
+      "pbjt_liability_idr": 220000
+    },
+    "2026-12": {
+      "accommodation_gross_idr": 4200000,
+      "cash_received_idr": 4180000,
+      "management_fee_idr": 640000,
+      "ota_fee_idr": 330000,
+      "owner_estimate_idr": 3230000,
+      "pbjt_liability_idr": 420000
+    }
+  },
+  "schema_version": 1,
+  "total": {
+    "accommodation_gross_idr": 6400000,
+    "cash_received_idr": 6380000,
+    "management_fee_idr": 1014000,
+    "ota_fee_idr": 660000,
+    "owner_estimate_idr": 4726000,
+    "pbjt_liability_idr": 640000
+  },
+  "trace": {
+    "R101": {
+      "hold": false,
+      "monthly": {
+        "2026-11": {
+          "accommodation_gross_idr": 2200000,
+          "management_fee_idr": 374000,
+          "nights": 2,
+          "rate_bps": [
+            1700
+          ]
+        },
+        "2026-12": {
+          "accommodation_gross_idr": 2200000,
+          "management_fee_idr": 440000,
+          "nights": 2,
+          "rate_bps": [
+            2000
+          ]
+        }
+      },
+      "nights": 4,
+      "selected_source_event_id": "E_R101_V2",
+      "superseded_source_event_ids": [
+        "E_R101_V1"
+      ]
+    },
+    "R202": {
+      "hold": false,
+      "monthly": {
+        "2026-12": {
+          "accommodation_gross_idr": 2000000,
+          "management_fee_idr": 200000,
+          "nights": 2,
+          "rate_bps": [
+            1000
+          ]
+        }
+      },
+      "nights": 2,
+      "selected_source_event_id": "E_R202",
+      "superseded_source_event_ids": []
+    },
+    "R303": {
+      "hold": true,
+      "monthly": {},
+      "nights": 0,
+      "selected_source_event_id": "E_R303",
+      "superseded_source_event_ids": []
+    }
+  }
+}

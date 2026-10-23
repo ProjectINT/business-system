@@ -54,8 +54,8 @@ export interface Snapshots {
 
 const ACCEPTED_STATUSES: ReadonlySet<string> = new Set(["confirmed", "modified"]);
 
-/** Code-unit order, the same in every locale. Callers sort distinct keys, so equal strings never meet. */
-function compareStrings(a: string, b: string): number {
+/** Code-unit order, the same in every locale; report.ts sorts its keys with it too. Callers sort distinct keys, so equal strings never meet. */
+export function compareStrings(a: string, b: string): number {
   return Number(a > b) - Number(a < b);
 }
 

@@ -51,3 +51,17 @@ export function rawCase(overrides: Raw = {}): Raw {
     ...overrides,
   };
 }
+
+/** A row of the six figures of the report (monthly, total, a villa's month), in the order of the plan's table (section 5). */
+export function figures(
+  accommodation_gross_idr: number,
+  pbjt_liability_idr: number,
+  ota_fee_idr: number,
+  management_fee_idr: number,
+  owner_estimate_idr: number,
+  cash_received_idr: number,
+) {
+  return { accommodation_gross_idr, pbjt_liability_idr, ota_fee_idr, management_fee_idr, owner_estimate_idr, cash_received_idr };
+}
+
+export const ZERO_FIGURES = figures(0, 0, 0, 0, 0, 0);

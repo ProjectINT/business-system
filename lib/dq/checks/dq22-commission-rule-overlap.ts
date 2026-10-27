@@ -1,8 +1,9 @@
-// DQ-22 commissionRuleOverlap: two rules of one villa whose periods share a date. A flag, not an
-// exclusion (decided 2026-10-18): rules change all the time and arrive in separate files, so the
-// overlap is a rate change. On the shared dates the rule with the later `effective_from` is in force
-// (`resolveCommissionRule`); the details say which rate applies where. SQL version: phase 7b.
-import { rateToString } from "../../calc";
+// DQ-22 commissionRuleOverlap: two rules of one villa whose periods share a date. A flag on the rules,
+// not an exclusion (decided 2026-10-18): both stay in the data. Which rate the shared dates get is the
+// policy `commissionRuleOverlap` (`resolveCommissionRule`): 'ambiguous' (default since 2026-10-27) —
+// none, DQ-17 excludes a stay with such a night; 'latest-start' — the later `effective_from`. The
+// details say which rule is in force where, `null` when none is. SQL version: phase 7b.
+import { rateToString, type CalcPolicies } from "../../calc";
 import type { Check, CheckContext, CheckResult, RowUnit } from "../types";
 import { fail, isOutUnit, pass, skip, SKIP } from "./common";
 
@@ -34,11 +35,11 @@ export function periodsOverlap(a: Candidate, b: Candidate): boolean {
   return (b.to === null || a.from <= b.to) && (a.to === null || b.from <= a.to);
 }
 
-function overlapWith(a: Candidate, b: Candidate) {
+function overlapWith(a: Candidate, b: Candidate, overlap: CalcPolicies["commissionRuleOverlap"]) {
   const from = a.from > b.from ? a.from : b.from;
   const to = a.to === null ? b.to : b.to === null ? a.to : a.to < b.to ? a.to : b.to;
   // Keys differ, so the later effective_from is unique: the key is villa@effective_from.
-  const inForce = a.from > b.from ? a.key : b.key;
+  const inForce = overlap === "ambiguous" ? null : a.from > b.from ? a.key : b.key;
   return { other: b.key, from, to, inForce };
 }
 
@@ -60,7 +61,7 @@ export const dq22: Check = {
       if (!isCandidate(c)) return c;
       const overlaps = candidates
         .filter((o) => o.propertyId === c.propertyId && o.key !== c.key && periodsOverlap(c, o))
-        .map((o) => overlapWith(c, o))
+        .map((o) => overlapWith(c, o, ctx.policies.commissionRuleOverlap))
         .sort((x, y) => (x.other < y.other ? -1 : 1));
       if (overlaps.length === 0) return pass(c.unit);
       return fail(c.unit, {

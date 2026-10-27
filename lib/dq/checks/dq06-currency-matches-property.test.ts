@@ -45,7 +45,7 @@ describe("DQ-06", () => {
 
   it("skips a row of an unknown villa (DQ-04) and, alone, rows whose villa or currency did not parse", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-06", "R0004").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-06", "R0004").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     const bad = datasetFrom({
       property: [PROPERTY],
       reservation: [{ ...RESERVATION, property_id: "" }, { ...RESERVATION, reservation_id: "R0002", currency: "" }, { ...RESERVATION, reservation_id: "R0003", property_id: "V009" }],

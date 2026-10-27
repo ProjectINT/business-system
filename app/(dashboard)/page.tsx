@@ -45,6 +45,12 @@ async function Overview({ searchParams }: Pick<PageProps<"/">, "searchParams">) 
         cancellations={toView(d.cancellations)}
         ownerBalanceGaps={[...d.ownerBalanceGaps]}
         reconciliationHref={`/import/reconciliation${query}`}
+        apart={{
+          held: toView(d.apart.heldAmount),
+          heldCount: d.apart.held.length,
+          unallocated: toView(d.apart.unallocatedAmount),
+          unallocatedCount: d.apart.unallocated.length,
+        }}
       />
       <OutsideFigures
         groups={toView(d.outside.groups)}

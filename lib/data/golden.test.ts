@@ -2,6 +2,7 @@
 // October and the whole period, fixed in numbers. They depend on the DQ statuses, so a change in a
 // rule or in the calculator shows up here as a diff. Cross-checked once by an independent pass over
 // the raw CSV (plain BigInt, no lib/ code): nights, GBV, OTA (and its split by channel), MF, expenses, owner balance, cash — equal to the rupiah.
+// MF per night (phase 6b, 2026-10-27): rechecked by an independent per-night pass (HALF_UP per night) over the raw rows the checks admit.
 import { describe, expect, it } from "vitest";
 import type { Money } from "../calc";
 import { dashboardOf, headlineOf, type Headline } from "./dashboard";
@@ -62,11 +63,15 @@ describe("golden: V011, September 2026 — the same numbers as lib/calc/golden.t
       otaFee: 3603816n,
       otaFeeOta: 1994230n,
       otaFeeDirect: 1609586n,
+      otaFeeUnknown: 0n,
+      pbjt: 0n, // the CSV has no PBJT
       netRental: 23188068n,
-      managementFee: 4554620n,
+      managementFee: 4554621n, // v1, one rounding per stay: 4 554 620
+      ownerEstimate: 18633447n,
       operatingExpenses: 1103588n,
-      ownerBalance: 17529860n,
+      ownerBalance: 17529859n,
       received: 10302481n,
+      pending: 0n, // every payment of the sample is received
       paidExpenses: 325200n,
       netCashFlow: 9977281n,
       expected: 23188068n,
@@ -98,11 +103,15 @@ describe("golden: the portfolio, records under review included", () => {
       otaFee: 183008072n,
       otaFeeOta: 143965529n,
       otaFeeDirect: 39042543n,
+      otaFeeUnknown: 0n,
+      pbjt: 0n, // the CSV has no PBJT
       netRental: 1073643451n,
-      managementFee: 223293180n,
+      managementFee: 223293162n, // v1: 223 293 180
+      ownerEstimate: 850350289n,
       operatingExpenses: 49462041n,
-      ownerBalance: 800888230n,
+      ownerBalance: 800888248n,
       received: 511162604n,
+      pending: 0n, // every payment of the sample is received
       paidExpenses: 41079463n,
       netCashFlow: 470083141n,
       expected: 1073643451n,
@@ -124,11 +133,15 @@ describe("golden: the portfolio, records under review included", () => {
       otaFee: 105451267n,
       otaFeeOta: 80170599n,
       otaFeeDirect: 25280668n,
+      otaFeeUnknown: 0n,
+      pbjt: 0n, // the CSV has no PBJT
       netRental: 611148339n,
-      managementFee: 127113711n,
+      managementFee: 127113685n, // v1: 127 113 711
+      ownerEstimate: 484034654n,
       operatingExpenses: 22546329n,
-      ownerBalance: 461488299n,
+      ownerBalance: 461488325n,
       received: 263553633n,
+      pending: 0n, // every payment of the sample is received
       paidExpenses: 16405266n,
       netCashFlow: 247148367n,
       expected: 548081851n,
@@ -147,11 +160,15 @@ describe("golden: the portfolio, records under review included", () => {
       otaFee: 77556805n,
       otaFeeOta: 63794930n,
       otaFeeDirect: 13761875n,
+      otaFeeUnknown: 0n,
+      pbjt: 0n, // the CSV has no PBJT
       netRental: 462495112n,
-      managementFee: 96179469n,
+      managementFee: 96179477n, // v1: 96 179 469
+      ownerEstimate: 366315635n,
       operatingExpenses: 26915712n,
-      ownerBalance: 339399931n,
+      ownerBalance: 339399923n,
       received: 221842916n,
+      pending: 0n, // every payment of the sample is received
       paidExpenses: 24674197n,
       netCashFlow: 197168719n,
       expected: 505398997n,
@@ -166,31 +183,38 @@ describe("golden: the portfolio, records under review included", () => {
 describe("golden: records under review left out (review=off)", () => {
   const d = dashboardOf(snapshot, filtersOf(snapshot, { review: "off" }));
 
-  it("only clean records remain: DQ-16, DQ-23 and the cases put most of the data under review", () => {
+  it("only clean records remain: the cases put most of the data under review", () => {
+    // v2 (phase 6b): DQ-16 is information and DQ-23 is merged into it, so 34 reservations and 15 payments
+    // they alone kept under review are clean — v1 had 55 nights and 121 313 115 here. Rechecked by an
+    // independent pass over the raw rows (amounts by night, MF per night, cash by date, reconciliation by check-out).
     expect(amounts(d.headline)).toEqual({
-      nights: 55,
-      gross: 121313115n,
+      nights: 224,
+      gross: 426292712n,
       refund: 0n,
-      otaFee: 16721293n,
-      otaFeeOta: 13753839n,
-      otaFeeDirect: 2967454n, // marketing fee of R0035 and R0100: DQ-11 is information, nothing else flags them
-      netRental: 104591822n,
-      managementFee: 21455838n,
+      otaFee: 62567706n,
+      otaFeeOta: 51411703n,
+      otaFeeDirect: 11156003n, // marketing fee of the clean direct bookings: DQ-11 is information
+      otaFeeUnknown: 0n,
+      pbjt: 0n, // the CSV has no PBJT
+      netRental: 363725006n,
+      managementFee: 74900366n,
+      ownerEstimate: 288824640n,
       operatingExpenses: 37386639n,
-      ownerBalance: 45749345n,
-      received: 24450887n,
+      ownerBalance: 251438001n,
+      received: 128717604n,
+      pending: 0n, // every payment of the sample is received
       paidExpenses: 29004061n,
-      netCashFlow: -4553174n,
-      expected: 104591822n,
-      reconciledReceived: 24450887n,
-      difference: -80140935n,
+      netCashFlow: 99713543n,
+      expected: 363725006n,
+      reconciledReceived: 128717604n,
+      difference: -235007402n,
     });
   });
 
   it("the part under review is the difference between the two runs, whatever the switch", () => {
     const on = dashboardOf(snapshot, filtersOf(snapshot));
     expect(d.underReview).toEqual(on.underReview);
-    expect(on.underReview.gross.amount).toBe(1256651523n - 121313115n);
+    expect(on.underReview.gross.amount).toBe(1256651523n - 426292712n);
     expect(amounts(on.underReview)).toEqual(
       Object.fromEntries(
         Object.entries(amounts(headlineOf(on.overview.portfolio))).map(([k, v]) => [
@@ -208,14 +232,13 @@ describe("outside the figures", () => {
     expect(d.outside.groups.map((g) => [g.entity, g.status, g.count, g.amount.amount, g.otherCurrency])).toEqual([
       ["reservation", "excluded", 3, 21533011n, 1], // R0034 (V999) + R0072 (refund > gross); R0061 in USD
       ["reservation", "duplicate", 1, 13628994n, 0], // the copy of R0015
-      ["payment", "excluded", 2, 12727390n, 0], // P0017 (V999) + P0036 (0, R0072 excluded)
+      ["payment", "excluded", 1, 12727390n, 0], // P0017 (V999); P0036 (0, R0072 excluded) is held, in the cash block
       ["payment", "duplicate", 1, 12211055n, 0], // the copy of P0075
       ["expense", "excluded", 1, 834779n, 0], // E0017 (V777)
     ]);
     expect(d.outside.records.map((r) => r.recordKey).sort()).toEqual([
       "E0017",
       "P0017",
-      "P0036",
       "P0075",
       "R0015",
       "R0034",
@@ -229,13 +252,14 @@ describe("outside the figures", () => {
     expect(d.outside.records.map((r) => r.propertyId)).not.toContain("V999");
   });
 
-  it("reconciliation: P0017 and P0036 reached no reservation", () => {
+  it("money apart: P0036 is held, 0 IDR — its reservation R0072 is excluded; nothing unallocated; P0017 is a wrong row (V999), excluded", () => {
     const r = reconciliationOf(snapshot, filtersOf(snapshot));
-    expect(r.unallocated.map((u) => [u.paymentId, u.reservationId, u.amount?.amount, u.ruleIds])).toEqual([
-      ["P0017", "R0034", 12727390n, ["DQ-04"]],
-      ["P0036", "R0072", 0n, ["DQ-05"]],
+    expect(r.apart.held.map((u) => [u.paymentId, u.reservationId, u.amount?.amount, u.reason, u.ruleIds])).toEqual([
+      ["P0036", "R0072", 0n, "reservation_excluded", ["DQ-15", "DQ-05"]],
     ]);
-    expect(r.unallocatedAmount.amount).toBe(12727390n);
+    expect(r.apart.heldAmount.amount).toBe(0n);
+    expect(r.apart.unallocated).toEqual([]); // v1 listed P0017 and P0036 as one "unallocated" list
+    expect(snapshot.records.find((x) => x.recordKey === "P0017")!.money).toBe("excluded");
     expect(r.rows).toHaveLength(147); // every admitted reservation checks out by 2026-11-05
   });
 });

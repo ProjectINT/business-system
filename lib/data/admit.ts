@@ -74,7 +74,8 @@ export function admit(dataset: Dataset, verdicts: readonly Verdict[]): Admitted 
     const gross = toMoney(need(v.gross_booking_value, "gross_booking_value", row.unitId), currency);
     const otaFee = toMoney(need(v.ota_fee, "ota_fee", row.unitId), currency);
     const refund = toMoney(need(v.refund_amount, "refund_amount", row.unitId), currency);
-    if (gross === null || otaFee === null || refund === null) {
+    const pbjt = toMoney(0n, currency); // the CSV has no PBJT column (PLAN.md 15)
+    if (gross === null || pbjt === null || otaFee === null || refund === null) {
       unknownCurrency("reservation", id, propertyId, currency);
       continue;
     }
@@ -85,6 +86,7 @@ export function admit(dataset: Dataset, verdicts: readonly Verdict[]): Admitted 
       checkOut: need(v.check_out, "check_out", row.unitId),
       status: need(v.status, "status", row.unitId),
       gross,
+      pbjt,
       otaFee,
       refund,
       channel: need(v.channel, "channel", row.unitId),
@@ -103,12 +105,18 @@ export function admit(dataset: Dataset, verdicts: readonly Verdict[]): Admitted 
       unknownCurrency("payment", id, propertyId, currency);
       continue;
     }
+    const status = need(v.status, "status", row.unitId);
+    if (status !== "received" && status !== "pending") {
+      failures.push({ entity: "payment", recordId: id, propertyId, code: "UNKNOWN_STATUS", message: `Unknown payment status: ${status}` });
+      continue;
+    }
     payments.push({
       paymentId: id,
       reservationId: need(v.reservation_id, "reservation_id", row.unitId),
       propertyId,
       paymentDate: need(v.payment_date, "payment_date", row.unitId),
       amount,
+      status,
       dqStatus,
     });
   }

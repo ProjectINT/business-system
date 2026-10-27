@@ -43,9 +43,10 @@ export const reservation = (id: number): fc.Arbitrary<ReservationInput> =>
       nights: fc.integer({ min: 1, max: 60 }),
       status: fc.constantFrom<ReservationInput["status"]>("confirmed", "modified", "cancelled"),
       gross: fc.bigInt({ min: 0n, max: BIG }),
+      pbjtShare: fc.integer({ min: 0, max: 200 }),
       otaShare: fc.integer({ min: -100, max: 1000 }),
       refundShare: fc.integer({ min: 0, max: 1000 }),
-      channel: fc.constantFrom<"OTA" | "Direct">("OTA", "Direct"),
+      channel: fc.constantFrom<ReservationInput["channel"]>("OTA", "Direct", null),
       dqStatus,
     })
     .map((r) => ({
@@ -55,6 +56,7 @@ export const reservation = (id: number): fc.Arbitrary<ReservationInput> =>
       checkOut: fromEpochDay(r.start + r.nights),
       status: r.status,
       gross: idr(r.gross),
+      pbjt: idr((r.gross * BigInt(r.pbjtShare)) / 1000n),
       otaFee: idr((r.gross * BigInt(r.otaShare)) / 1000n),
       refund: idr((r.gross * BigInt(r.refundShare)) / 1000n),
       channel: r.channel,
@@ -75,13 +77,21 @@ export const rules = fc
 
 const payment = (id: number, reservationCount: number): fc.Arbitrary<PaymentInput> =>
   fc
-    .record({ r: fc.integer({ min: 1, max: Math.max(1, reservationCount) }), propertyId, day: stayDay, amount: money(BIG), dqStatus })
+    .record({
+      r: fc.integer({ min: 1, max: Math.max(1, reservationCount) }),
+      propertyId,
+      day: stayDay,
+      amount: money(BIG),
+      status: fc.constantFrom<PaymentInput["status"]>("received", "pending"),
+      dqStatus,
+    })
     .map((p) => ({
       paymentId: `P${String(id).padStart(4, "0")}`,
       reservationId: `R${String(p.r).padStart(4, "0")}`,
       propertyId: p.propertyId,
       paymentDate: fromEpochDay(p.day),
       amount: p.amount,
+      status: p.status,
       dqStatus: p.dqStatus,
     }));
 

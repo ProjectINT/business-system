@@ -34,7 +34,7 @@ describe("DQ-11", () => {
 
   it("skips a row already out, and alone rows whose channel or fee did not parse", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-11", "R0005").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-11", "R0005").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     const bad = datasetFrom({ reservation: [{ ...RESERVATION, channel: "" }, { ...RESERVATION, reservation_id: "R0002", channel: "Direct", ota_fee: "" }] });
     expect(await skipsAlone(dq11, bad)).toEqual({ R0001: "channel not parsed (DQ-03)", R0002: "ota_fee not parsed (DQ-03)" });
   });

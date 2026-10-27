@@ -59,7 +59,7 @@ function partsOf(id: FigureKey, s: Sources, f: Figures, underReview: boolean): P
     case "gross":
       return {
         lines: s.stays
-          .map((x) => ({ key: x.reservationId, label: x.reservationId, detail: `${stayText(x)} · ${x.channel}`, value: x.gross }))
+          .map((x) => ({ key: x.reservationId, label: x.reservationId, detail: `${stayText(x)} · ${x.channel ?? "channel unknown"}`, value: x.gross }))
           .filter(nonZero),
       };
     case "otaFee":
@@ -68,10 +68,17 @@ function partsOf(id: FigureKey, s: Sources, f: Figures, underReview: boolean): P
           .map((x) => ({
             key: x.reservationId,
             label: x.reservationId,
-            detail: x.channel === "Direct" ? "Direct booking · marketing fee" : "OTA booking",
+            detail: x.channel === "Direct" ? "Direct booking · marketing fee" : x.channel === "OTA" ? "OTA booking" : "Channel unknown",
             value: x.otaFee,
           }))
           .filter(nonZero),
+      };
+    case "pbjt":
+      return {
+        lines: s.stays
+          .map((x) => ({ key: x.reservationId, label: x.reservationId, detail: stayText(x), value: x.pbjt }))
+          .filter(nonZero),
+        note: "A tax collected with the stay and owed to the state: not revenue, not in the fee",
       };
     case "managementFee":
       return {
@@ -79,7 +86,7 @@ function partsOf(id: FigureKey, s: Sources, f: Figures, underReview: boolean): P
           .map((x) => ({
             key: x.reservationId,
             label: x.reservationId,
-            detail: `${percent(x.rate)} of gross · ${stayText(x)}`,
+            detail: `${x.rates.map(percent).join(" / ")} of gross · ${stayText(x)}`,
             value: x.managementFee,
           }))
           .filter(nonZero),
@@ -113,6 +120,15 @@ function partsOf(id: FigureKey, s: Sources, f: Figures, underReview: boolean): P
         .filter(nonZero);
       const rest = s.reconciliation.length - lines.length;
       return { lines, note: rest > 0 ? `${plural(rest, "more reservation")} matched: difference 0` : undefined };
+    }
+    case "ownerEstimate": {
+      const terms: Line[] = [
+        { key: "gross", label: "Gross bookings", value: f.gross },
+        { key: "refund", label: "Refunds", value: -s.refund },
+        { key: "otaFee", label: "OTA fees", value: -f.otaFee },
+        { key: "managementFee", label: "Mgmt fees", value: -f.managementFee },
+      ];
+      return { lines: terms.filter((t) => t.key !== "refund" || t.value !== 0) };
     }
     case "ownerBalance": {
       const terms: Line[] = [

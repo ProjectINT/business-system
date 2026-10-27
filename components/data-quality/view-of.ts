@@ -1,7 +1,7 @@
 // Server side: the data-quality page as plain text and numbers for the client components. Every figure
 // comes from qualityOf (lib/data/quality.ts); here amounts are written out and facts put into words.
 import { toView, type Money } from "@/lib/calc";
-import { qualityOf, rawTablesOf, type Snapshot } from "@/lib/data";
+import { qualityOf, rawTablesOf, type MoneyKind, type Snapshot } from "@/lib/data";
 import type { Action, Entity, Outcome, RowEntity, RuleId, Status } from "@/lib/dq";
 import { idrCompact, idrFull, moneyDigits, moneyFull } from "@/lib/format";
 import { ruleMeta } from "@/components/rules/rule-meta";
@@ -54,6 +54,8 @@ export interface FileAmountView {
   inFigures: string;
   excluded: string;
   duplicate: string;
+  /** Payments: the amount by kind of money, digits. */
+  byMoney: Record<MoneyKind, string> | null;
 }
 
 export interface FileView {
@@ -65,6 +67,7 @@ export interface FileView {
   amountColumn: string | null;
   amounts: FileAmountView[];
   unsummed: number;
+  rowsByMoney: Record<MoneyKind, number> | null;
   control: Outcome | null;
   balanced: boolean;
 }
@@ -212,8 +215,10 @@ export function dataQualityOf(snapshot: Snapshot): DataQualityModel {
         inFigures: moneyDigits(a.inFigures),
         excluded: moneyDigits(a.byStatus.excluded),
         duplicate: moneyDigits(a.byStatus.duplicate),
+        byMoney: a.byMoney === null ? null : (Object.fromEntries(Object.entries(a.byMoney).map(([k, m]) => [k, moneyDigits(m)])) as Record<MoneyKind, string>),
       })),
       unsummed: f.unsummed,
+      rowsByMoney: f.rowsByMoney === null ? null : { ...f.rowsByMoney },
       control: f.control,
       balanced: f.balanced,
     })),

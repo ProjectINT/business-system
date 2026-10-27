@@ -1,6 +1,8 @@
 // DQ-05 paymentReservationValid: a payment points at a reservation that exists and is in the data.
-// Missing or excluded reservation → the payment is excluded and shown as "unallocated". Reservation
-// waiting for a human (a case) → the payment waits with it: `hold`, the only rule with two actions.
+// Missing reservation → the payment is excluded, its money "unallocated" (`missing`); excluded
+// reservation (an older version does not count: DQ-02) → excluded too, its money "held"
+// (`reservation_excluded`, PLAN.md 7.4). Reservation waiting for a human (a case) → the payment waits
+// with it: `hold`, its money "held" as well.
 import type { Check, CheckContext, CheckResult } from "../types";
 import { amountIdrOf, fail, isOutUnit, pass, reservationLookup, skip, SKIP } from "./common";
 
@@ -11,7 +13,7 @@ export const dq05: Check = {
   entity: "payment",
   action: "exclude",
   engine: "ts",
-  dependsOn: ["DQ-04", "DQ-06", "DQ-07", "DQ-09", "DQ-12", "DQ-13"],
+  dependsOn: ["DQ-04", "DQ-06", "DQ-07", "DQ-09", "DQ-12", "DQ-13", "DQ-17", "DQ-25"],
   async run(ctx: CheckContext): Promise<CheckResult[]> {
     const lookup = reservationLookup(ctx);
     return ctx.units("payment").map((u) => {

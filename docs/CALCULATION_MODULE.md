@@ -2,7 +2,7 @@
 
 Что считаем — PLAN.md, 7. Здесь — как считаем: типы, округление, распределение, ошибки, тесты.
 
-Статус: v2 от 2026-10-27. Модуль переводится на денежную модель финального задания (PLAN.md 7, отличия — 7.8): ставка и округление комиссии по каждой ночи, PBJT, статус платежа, три вида денег. Документ описывает целевое состояние; код меняется фазой 6b (ROADMAP.md). До неё `lib/calc` работает по v1 (ставка на дату заезда, одно округление на бронь), а новая модель уже реализована и покрыта тестами в адаптере `lib/nightly` (FINAL_TEST_PLAN.md 3). Где числа v1 и v2 различаются, приведены оба.
+Статус: v2 от 2026-10-27, сделан в коде фазой 6b (ROADMAP.md, MONEY_MODEL_PLAN.md). Модуль считает по денежной модели финального задания (PLAN.md 7, отличия — 7.8): ставка и округление комиссии по каждой ночи, PBJT, статус платежа, три вида денег. `lib/nightly` считает ночи через модуль. Где числа v1 (ставка на дату заезда, одно округление на бронь) и v2 различаются, приведены оба: v1 — история.
 
 ## 1. Требования
 
@@ -239,7 +239,8 @@ class CalcError extends Error {
 | Функция | Результат | Формула |
 |---|---|---|
 | `resolveCommissionRule(rules, propertyId, date, overlap)` | правило | `effective_from ≤ date ≤ effective_to` (null — без срока); 0 правил → `NO_COMMISSION_RULE`; несколько → при `overlap = 'latest-start'` действует правило с самой поздней `effective_from` (PLAN.md, журнал 2026-10-18), при `'ambiguous'` → `AMBIGUOUS_COMMISSION_RULE`; несколько с одной и той же самой поздней `effective_from` → `AMBIGUOUS_COMMISSION_RULE` при любой политике. **Дата — каждая ночь брони** (v1 — `check_in`) |
-| `commissionRulesOn(rules, propertyId, date)` | список правил | все правила виллы на дату, без исключений; через неё DQ-17 по каждой ночи видит, что правила нет или их два |
+| `commissionRulesOn(rules, propertyId, date)` | список правил | все правила виллы на дату, без исключений |
+| `findCommissionRule(rules, propertyId, date, overlap)` | `{ rule }` или `{ problem: 'no_rule' \| 'ambiguous' }` | то же, что `resolveCommissionRule`, без исключения: по ней DQ-17 и `lib/nightly` по каждой ночи видят, что правила нет или их два, — тем же правилом выбора, что у расчёта |
 | `managementFeeForNight(nightGross, rule, mode)` | `MF(d)` | `switch (feeBasis)`: `gross_booking_value` → `roundDiv(A(d) × num, den)`; v1 — `calculateManagementFee(r, rule, mode)` на всю бронь |
 | `calculateNetRental(r)` | чистая выручка аренды | `A − REF − OTA` |
 | `calculateExpectedPayout(r)` | ожидаемое поступление | `A + PBJT − OTA − REF`: OTA перечисляет проживание + PBJT за вычетом своей комиссии (PLAN.md, 7.4); v1 — без PBJT |
@@ -359,14 +360,14 @@ interface CalcPolicies {
   rounding: RoundingMode;                         // 'half-up' (ТЗ п. 6)
   reconciliationDate: 'check_out' | 'last_night'; // 'check_out' — как в PLAN.md, 7.1; см. вопрос 3
   paymentDue: 'check_in' | 'check_out';           // 'check_in' — оплата 100% до заезда (PLAN.md, журнал 2026-10-18)
-  commissionRuleOverlap: 'latest-start' | 'ambiguous';  // v2: 'latest-start' в системе, 'ambiguous' в CLI финального задания
+  commissionRuleOverlap: 'latest-start' | 'ambiguous';  // v2: 'ambiguous' по умолчанию, в системе и в CLI (решение 2026-10-27)
 }
 
 export const DEFAULT_POLICIES: CalcPolicies = Object.freeze({ ... });
 ```
 
 - Тип и значения по умолчанию лежат в `lib/calc/policies.ts`. Ставка комиссии берётся на дату каждой ночи — это не политика: ТЗ финального задания (4B) называет одну ставку на бронь ошибкой. v1 брал ставку на дату заезда (решение 2026-10-18, отменено 2026-10-27).
-- `commissionRuleOverlap` — что делать, если на ночь действуют два правила виллы с разными датами начала. `latest-start` (по умолчанию): действует правило с более поздней `effective_from`, пересечение помечает DQ-22 (PLAN.md, журнал 2026-10-18). `ambiguous`: `AMBIGUOUS_COMMISSION_RULE`, бронь вне расчёта — так читает ТЗ п. 14 CLI финального задания, и политика сохраняет его результат байт в байт после перехода на ядро (PLAN.md 7.7, журнал 2026-10-27).
+- `commissionRuleOverlap` — что делать, если на ночь действуют два правила виллы с разными датами начала. `ambiguous` (по умолчанию, решение автора 2026-10-27): `AMBIGUOUS_COMMISSION_RULE`, бронь вне расчёта, DQ-17 её исключает, DQ-22 помечает пересечение — так ТЗ п. 14 читают и система, и CLI финального задания (его результат байт в байт не зависит от значения по умолчанию: CLI передаёт `ambiguous` сам). `latest-start`: действует правило с более поздней `effective_from` (решение 2026-10-18, отменено 2026-10-27; значение политики осталось).
 - Переключатель `includeReview` — фильтр интерфейса, он передаётся в `Scope`.
 
 ## 7. Граница модуля

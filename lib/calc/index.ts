@@ -6,7 +6,13 @@ export * from "./primitives/rate";
 export * from "./primitives/rounding";
 export * from "./primitives/allocate";
 export * from "./primitives/calendar";
-export { commissionRulesOn, resolveCommissionRule, calculateManagementFee } from "./commission";
+export {
+  commissionRulesOn,
+  findCommissionRule,
+  resolveCommissionRule,
+  managementFeeForNight,
+  type RuleLookup,
+} from "./commission";
 export {
   calculateNetRental,
   calculateExpectedPayout,
@@ -17,7 +23,7 @@ export {
 export { calculateAccruals } from "./accrual";
 export { calculateCashFlow } from "./cash";
 export { reconcileReservation, reconcile } from "./reconciliation";
-export { estimateOwnerBalance, OWNER_BALANCE_GAPS, type OwnerBalanceGap } from "./owner-balance";
+export { estimateOwnerBalance, estimateOwnerShare, OWNER_BALANCE_GAPS, type OwnerBalanceGap } from "./owner-balance";
 export { itemize } from "./breakdown";
 export { calculateBreakdown, calculateOverview } from "./overview";
 export { toView, type View } from "./view";

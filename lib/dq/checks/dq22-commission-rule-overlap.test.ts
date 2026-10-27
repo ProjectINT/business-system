@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_POLICIES } from "../../calc";
 import { describeContract } from "../testing/contract";
 import { COMMISSION_RULE, datasetFrom, PROPERTY } from "../testing/fixture";
 import { contextBefore, resultFor, runAlone, runOn, skipsAlone, statusOf } from "../testing/run";
@@ -28,11 +29,23 @@ const ds = datasetFrom({
   ],
 });
 
+const latestStart = { policies: { ...DEFAULT_POLICIES, commissionRuleOverlap: "latest-start" as const } };
+
 describeContract(dq22, contextBefore(dq22, ds));
 
 describe("DQ-22", () => {
-  it("flags both rules of an overlap, names the one in force on the shared dates", async () => {
+  it("default 'ambiguous': flags both rules of an overlap, no rule is in force on the shared dates", async () => {
     const report = await runOn(ds);
+    expect(resultFor(report, "DQ-22", "V001@2026-09-01")).toMatchObject({
+      outcome: "fail",
+      relatedKeys: ["V001@2026-09-15"],
+      details: { overlaps: [{ other: "V001@2026-09-15", from: "2026-09-15", to: "2026-09-30", inForce: null }] },
+    });
+    expect(statusOf(report, "V001@2026-09-01")).toBe("review"); // a flag: both rules stay in the data
+  });
+
+  it("'latest-start': names the rule in force on the shared dates", async () => {
+    const report = await runOn(ds, latestStart);
     expect(resultFor(report, "DQ-22", "V001@2026-09-01")).toMatchObject({
       outcome: "fail",
       relatedKeys: ["V001@2026-09-15"],
@@ -51,11 +64,10 @@ describe("DQ-22", () => {
     expect(resultFor(report, "DQ-22", "V001@2026-10-01").details).toMatchObject({
       overlaps: [{ other: "V001@2026-09-15", from: "2026-10-01", to: "2026-12-31", inForce: "V001@2026-10-01" }],
     });
-    expect(statusOf(report, "V001@2026-09-01")).toBe("review"); // a flag: both rules stay in the data
   });
 
   it("adjacent periods do not overlap; a shared end date does", async () => {
-    const report = await runOn(ds);
+    const report = await runOn(ds, latestStart);
     expect(resultFor(report, "DQ-22", "V002@2026-09-01").outcome).toBe("pass");
     expect(resultFor(report, "DQ-22", "V002@2026-10-01").outcome).toBe("pass");
     expect(resultFor(report, "DQ-22", "V003@2026-09-30")).toMatchObject({
@@ -65,7 +77,7 @@ describe("DQ-22", () => {
   });
 
   it("two bounded periods: the overlap ends with the earlier end", async () => {
-    const report = await runOn(ds);
+    const report = await runOn(ds, latestStart);
     expect(resultFor(report, "DQ-22", "V007@2026-09-20").details).toMatchObject({
       overlaps: [{ other: "V007@2026-09-01", from: "2026-09-20", to: "2026-09-30", inForce: "V007@2026-09-20" }],
     });
@@ -76,9 +88,9 @@ describe("DQ-22", () => {
     const report = await runOn(ds);
     const v003 = report.results.get("DQ-22")!.filter((r) => r.recordKey === "V003@2026-09-01");
     expect(v003.map((r) => r.outcome)).toEqual(["fail", "skip"]);
-    expect(v003[1]!.reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(v003[1]!.reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     const open = datasetFrom({ commission_rule: [rule("V001", "2026-10-01", ""), rule("V001", "2026-09-01", ""), rule("V001", "2026-09-15", "")] });
-    const r = await runOn(open);
+    const r = await runOn(open, latestStart);
     expect(resultFor(r, "DQ-22", "V001@2026-09-01").details).toMatchObject({
       overlaps: [
         { other: "V001@2026-09-15", from: "2026-09-15", to: null, inForce: "V001@2026-09-15" },

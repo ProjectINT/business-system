@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { describeContract } from "../testing/contract";
-import { datasetFrom, PAYMENT, PROPERTY, RESERVATION } from "../testing/fixture";
+import { COMMISSION_RULE, PAYMENT, PROPERTY, RESERVATION, datasetFrom } from "../testing/fixture";
 import { contextBefore, resultFor, runOn, skipsAlone, statusOf } from "../testing/run";
 import { dq19 } from "./dq19-payment-property-matches";
 
 const ds = datasetFrom({
   property: [PROPERTY, { ...PROPERTY, property_id: "V002" }],
+  commission_rule: [COMMISSION_RULE],
   reservation: [RESERVATION],
   payment: [PAYMENT, { ...PAYMENT, payment_id: "P0002", property_id: "V002" }, { ...PAYMENT, payment_id: "P0003", reservation_id: "R0099" }],
 });
@@ -27,7 +28,7 @@ describe("DQ-19", () => {
 
   it("skips a payment already out (DQ-05), and alone unparsed values and unknown reservations", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-19", "P0003").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-19", "P0003").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     const bad = datasetFrom({
       reservation: [RESERVATION, { ...RESERVATION, reservation_id: "R0002" }, { ...RESERVATION, reservation_id: "R0002", gross_booking_value: "5" }],
       payment: [

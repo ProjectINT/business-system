@@ -1,9 +1,10 @@
-import { resolveCommissionRule, calculateManagementFee } from "./commission";
+import { distinctRates, managementFeeForNight, resolveCommissionRule } from "./commission";
 import { assertNever, CalcError, isCalcError } from "./errors";
 import { assertPolicies, type CalcPolicies } from "./policies";
 import { allocate } from "./primitives/allocate";
 import { eachNight, nightsBetween } from "./primitives/calendar";
-import { assertSameCurrency, parseCurrency, sub, zero, type Money } from "./primitives/money";
+import { add, assertSameCurrency, parseCurrency, sub, sum, zero, type Money } from "./primitives/money";
+import type { Rate } from "./primitives/rate";
 import type {
   BatchResult,
   CalcFailure,
@@ -21,12 +22,12 @@ export function calculateNetRental(r: Amounts): Money {
   return sub(sub(r.gross, r.refund), r.otaFee);
 }
 
-/** What the channel should pay out: GBV − OTA − REF (the OTA keeps its fee, PLAN.md, 7.4). */
-export function calculateExpectedPayout(r: Amounts): Money {
-  return sub(sub(r.gross, r.otaFee), r.refund);
+/** What the channel should pay out: A + PBJT − OTA − REF (it passes the stay and PBJT on and keeps its fee, PLAN.md, 7.4). */
+export function calculateExpectedPayout(r: Amounts & Pick<ReservationInput, "pbjt">): Money {
+  return sub(sub(add(r.gross, r.pbjt), r.otaFee), r.refund);
 }
 
-/** Owner share before expenses: GBV − REF − OTA − MF. */
+/** Owner share before expenses (owner estimate of the reservation, ТЗ п. 8): A − REF − OTA − MF; PBJT is not in it. */
 export function calculateOwnerShare(r: Amounts, managementFee: Money): Money {
   return sub(calculateNetRental(r), managementFee);
 }
@@ -42,35 +43,58 @@ export function assertAdmitted(record: { readonly dqStatus: string }, id: string
   }
 }
 
-function spreadOverNights(
-  r: ReservationInput,
-  nights: number,
-  amounts: { gross: Money; refund: Money; otaFee: Money; managementFee: Money },
-  policies: CalcPolicies,
-): NightLine[] {
+type Night = NightLine & { readonly rate: Rate };
+
+/**
+ * One line per night of an active reservation: A, PBJT, REF and OTA are each spread over the nights,
+ * and every night takes the rule in force on its date and its own rounding. A night without a rule
+ * fails the whole reservation: there is no partly calculated reservation.
+ */
+function nightLines(r: ReservationInput, nights: number, rules: readonly CommissionRuleInput[], policies: CalcPolicies): Night[] {
+  const gross = allocate(r.gross, nights);
+  const pbjt = allocate(r.pbjt, nights);
+  const refund = allocate(r.refund, nights);
+  const otaFee = allocate(r.otaFee, nights);
+  return eachNight(r.checkIn, r.checkOut).map((date, i) => {
+    const rule = resolveCommissionRule(rules, r.propertyId, date, policies.commissionRuleOverlap);
+    const g = gross[i] as Money;
+    return {
+      date,
+      nights: 1,
+      rate: rule.rate,
+      gross: g,
+      pbjt: pbjt[i] as Money,
+      refund: refund[i] as Money,
+      otaFee: otaFee[i] as Money,
+      managementFee: managementFeeForNight(g, rule, policies.rounding),
+    };
+  });
+}
+
+/** 'nights' keeps the night lines; 'checkout' folds them into one line on the check-out date, the fee being their sum. */
+function recognise(r: ReservationInput, nights: readonly Night[], managementFee: Money, policies: CalcPolicies): NightLine[] {
   switch (policies.revenueRecognition) {
+    case "nights":
+      return [...nights];
     case "checkout":
-      return [{ date: r.checkOut, nights, ...amounts }];
-    case "nights": {
-      const gross = allocate(amounts.gross, nights);
-      const refund = allocate(amounts.refund, nights);
-      const otaFee = allocate(amounts.otaFee, nights);
-      const managementFee = allocate(amounts.managementFee, nights);
-      return eachNight(r.checkIn, r.checkOut).map((date, i) => ({
-        date,
-        nights: 1,
-        gross: gross[i] as Money,
-        refund: refund[i] as Money,
-        otaFee: otaFee[i] as Money,
-        managementFee: managementFee[i] as Money,
-      }));
-    }
+      return [
+        {
+          date: r.checkOut,
+          nights: nights.length,
+          rate: null,
+          gross: r.gross,
+          pbjt: r.pbjt,
+          refund: r.refund,
+          otaFee: r.otaFee,
+          managementFee,
+        },
+      ];
     default:
       return assertNever(policies.revenueRecognition, "INVALID_POLICY", "revenueRecognition");
   }
 }
 
-/** One reservation: recognised amounts, management fee with one rounding, and night lines. */
+/** One reservation: recognised amounts, the management fee rounded per night, and night lines. */
 export function calculateReservation(
   r: ReservationInput,
   rules: readonly CommissionRuleInput[],
@@ -78,6 +102,7 @@ export function calculateReservation(
 ): ReservationCalc {
   assertAdmitted(r, r.reservationId);
   parseCurrency(r.gross.currency);
+  assertSameCurrency(r.gross, r.pbjt);
   assertSameCurrency(r.gross, r.otaFee);
   assertSameCurrency(r.gross, r.refund);
   const nights = nightsBetween(r.checkIn, r.checkOut);
@@ -101,13 +126,14 @@ export function calculateReservation(
   switch (r.status) {
     case "confirmed":
     case "modified": {
-      const rule = resolveCommissionRule(rules, r.propertyId, r.checkIn);
-      const managementFee = calculateManagementFee(r, rule, policies.rounding);
+      const perNight = nightLines(r, nights, rules, policies);
+      const managementFee = sum(perNight.map((l) => l.managementFee), r.gross.currency);
       return {
         ...base,
         active: true,
-        rate: rule.rate,
+        rates: distinctRates(perNight.map((l) => l.rate)),
         gross: r.gross,
+        pbjt: r.pbjt,
         refund: r.refund,
         otaFee: r.otaFee,
         managementFee,
@@ -115,7 +141,7 @@ export function calculateReservation(
         expectedPayout: calculateExpectedPayout(r),
         ownerShare: calculateOwnerShare(r, managementFee),
         cancelled: null,
-        lines: spreadOverNights(r, nights, { gross: r.gross, refund: r.refund, otaFee: r.otaFee, managementFee }, policies),
+        lines: recognise(r, perNight, managementFee, policies),
       };
     }
     case "cancelled": {
@@ -123,8 +149,9 @@ export function calculateReservation(
       return {
         ...base,
         active: false,
-        rate: null,
+        rates: [],
         gross: z,
+        pbjt: z,
         refund: z,
         otaFee: z,
         managementFee: z,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { describeContract } from "../testing/contract";
-import { apart, datasetFrom, PAYMENT, PROPERTY, RESERVATION } from "../testing/fixture";
+import { COMMISSION_RULE, PAYMENT, PROPERTY, RESERVATION, apart, datasetFrom } from "../testing/fixture";
 import { contextBefore, resultFor, runAlone, runOn, skipsAlone, statusOf } from "../testing/run";
 import { dq05 } from "./dq05-payment-reservation-valid";
 
@@ -8,6 +8,7 @@ const pay = (payment_id: string, reservation_id: string, extra: Record<string, s
 
 const ds = datasetFrom({
   property: [PROPERTY],
+  commission_rule: [COMMISSION_RULE],
   reservation: [
     ...apart([
       RESERVATION,
@@ -36,7 +37,7 @@ describe("DQ-05", () => {
   it("passes a payment of a live reservation; a duplicate copy of the reservation does not matter", async () => {
     const report = await runOn(ds);
     expect(resultFor(report, "DQ-05", "P0001").outcome).toBe("pass");
-    expect(report.verdicts.filter((v) => v.recordKey === "R0005").map((v) => v.status)).toEqual(["review", "duplicate"]); // review: unpaid (DQ-16)
+    expect(report.verdicts.filter((v) => v.recordKey === "R0005").map((v) => v.status)).toEqual(["clean", "duplicate"]); // unpaid at check-in is information (DQ-16)
     expect(resultFor(report, "DQ-05", "P0006").outcome).toBe("pass");
   });
 
@@ -60,7 +61,7 @@ describe("DQ-05", () => {
 
   it("skips a payment already out, and alone one whose reservation id did not parse", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-05", "P0007").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-05", "P0007").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     const bad = datasetFrom({ reservation: [{ ...RESERVATION, reservation_id: "" }], payment: [{ ...PAYMENT, reservation_id: "" }, pay("P0002", "R0001"), pay("P0003", "R0001")] });
     expect(await skipsAlone(dq05, bad)).toEqual({ P0001: "reservation_id not parsed (DQ-03)" });
     const alone = await runAlone(dq05, bad); // a reservation without a key is no reservation; the lookup is cached per id

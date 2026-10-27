@@ -4,7 +4,7 @@ import { parseDate, period, type CalcPolicies, type CalendarDate, type Money } f
 import { ENTITIES } from "../ingest";
 import { entitiesOf, type Check, type Dataset, type JournalResult, type RowEntity, type RunReport, type Verdict } from "../dq";
 import { admit, calcStatus, toMoney } from "./admit";
-import type { FailedRule, PropertyInfo, RecordInfo, RuleInfo, Snapshot, SourceInfo } from "./types";
+import type { FailedRule, MoneyKind, PropertyInfo, RecordInfo, RuleInfo, Snapshot, SourceInfo } from "./types";
 
 export interface SnapshotParts {
   readonly source: SourceInfo;
@@ -71,10 +71,36 @@ function failedRules(report: RunReport, checks: readonly Check[]): Map<string, F
   return out;
 }
 
+/** Why DQ-05 failed a payment, by unit id: `missing`, `reservation_excluded`, … */
+function paymentProblems(report: RunReport): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const [ruleId, results] of report.results) {
+    if (ruleId !== "DQ-05") continue;
+    for (const r of results) if (r.outcome === "fail") out.set(r.unitId, (r.details as { problem: string }).problem);
+  }
+  return out;
+}
+
+/** PLAN.md 7.4: one kind of money per payment, from its verdict, the reason DQ-05 gives and its own status. */
+function moneyKindOf(row: Dataset["rows"]["payment"][number], verdict: Verdict, problem: string | undefined): MoneyKind {
+  switch (verdict.status) {
+    case "duplicate":
+    case "superseded": // an older version: the newer row carries the money
+      return "duplicate";
+    case "excluded":
+      if (verdict.ruleIds.includes("DQ-25")) return "held"; // an unknown status: real money or not, not the villa's yet
+      if (verdict.ruleIds.includes("DQ-05")) return problem === "missing" ? "unallocated" : "held";
+      return "excluded";
+    default:
+      return row.values.status === "pending" ? "held" : "received";
+  }
+}
+
 export function buildSnapshot(parts: SnapshotParts): Snapshot {
   const { source, dataset, report, checks, policies } = parts;
   const verdictOf = new Map<string, Verdict>(report.verdicts.map((v) => [v.unitId, v]));
   const failed = failedRules(report, checks);
+  const problems = paymentProblems(report);
 
   const records: RecordInfo[] = [];
   for (const entity of ENTITIES) {
@@ -90,6 +116,7 @@ export function buildSnapshot(parts: SnapshotParts): Snapshot {
         status: verdict.status,
         ruleIds: verdict.ruleIds,
         failed: failed.get(row.unitId) ?? [],
+        money: entity === "payment" ? moneyKindOf(row as Dataset["rows"]["payment"][number], verdict, problems.get(row.unitId)) : null,
       });
     }
   }

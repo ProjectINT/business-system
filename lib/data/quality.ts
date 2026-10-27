@@ -10,7 +10,7 @@ import { buildCases, type Action, type Case, type JournalResult, type Outcome, t
 import { ENTITIES } from "../ingest";
 import { calcStatus } from "./admit";
 import { BASE_CURRENCY } from "./filters";
-import type { RecordInfo, RuleInfo, Snapshot } from "./types";
+import type { MoneyKind, RecordInfo, RuleInfo, Snapshot } from "./types";
 
 const STATUSES: readonly Status[] = ["clean", "review", "pending", "excluded", "duplicate", "superseded"];
 
@@ -40,6 +40,8 @@ export interface AmountTotals {
   readonly source: Money;
   readonly byStatus: Readonly<Record<Status, Money>>;
   readonly inFigures: Money;
+  /** Payments: the same amount by kind of money (PLAN.md 7.4); `null` for the other files. */
+  readonly byMoney: Readonly<Record<MoneyKind, Money>> | null;
 }
 
 /** Control totals of a file (PLAN.md 5.2): source = in the figures + excluded + duplicates, by rows and by amount. */
@@ -56,6 +58,11 @@ export interface FileTotals {
   readonly amounts: readonly AmountTotals[];
   /** Rows whose amount did not parse or is in an unknown currency: counted above, not summed. */
   readonly unsummed: number;
+  /**
+   * Payments: rows by kind of money — received + held + unallocated + excluded + duplicate = the file,
+   * each payment in exactly one; `null` for the other files.
+   */
+  readonly rowsByMoney: Readonly<Record<MoneyKind, number>> | null;
   /** DQ-90 on the file; `null` when it did not run. */
   readonly control: Outcome | null;
   /**
@@ -214,6 +221,12 @@ const AMOUNT_COLUMN: Readonly<Partial<Record<RowEntity, string>>> = {
 /** Currencies in the order the page lists them: the base one first. */
 const CURRENCIES: readonly Currency[] = [BASE_CURRENCY, ...(Object.keys(SCALE) as Currency[]).filter((c) => c !== BASE_CURRENCY)];
 
+export const MONEY_KINDS: readonly MoneyKind[] = ["received", "held", "unallocated", "excluded", "duplicate"];
+
+function byMoney<T>(value: () => T): Record<MoneyKind, T> {
+  return Object.fromEntries(MONEY_KINDS.map((k) => [k, value()])) as Record<MoneyKind, T>;
+}
+
 function fileTotals(snapshot: Snapshot, checks: ReadonlyMap<string, readonly RecordCheck[]>): FileTotals[] {
   return ENTITIES.map((entity) => {
     const file = snapshot.dataset.files[entity];
@@ -228,15 +241,27 @@ function fileTotals(snapshot: Snapshot, checks: ReadonlyMap<string, readonly Rec
       if (mine.length === 0) return [];
       const total = byStatus(() => zero(currency));
       for (const r of mine) total[r.status] = add(total[r.status], r.amount!);
+      let money: Record<MoneyKind, Money> | null = null;
+      if (entity === "payment") {
+        money = byMoney(() => zero(currency));
+        for (const r of mine) money[r.money!] = add(money[r.money!], r.amount!);
+      }
       return [
         {
           currency,
           source: mine.reduce((m, r) => add(m, r.amount!), zero(currency)),
           byStatus: total,
           inFigures: IN_FIGURES.reduce((m, s) => add(m, total[s]), zero(currency)),
+          byMoney: money,
         },
       ];
     });
+
+    let rowsByMoney: Record<MoneyKind, number> | null = null;
+    if (entity === "payment") {
+      rowsByMoney = byMoney(() => 0);
+      for (const r of records) rowsByMoney[r.money!] += 1;
+    }
 
     const dq90 = (checks.get(file.fileName) ?? []).find((c) => c.ruleId === "DQ-90");
     const control = dq90 === undefined ? null : dq90.result.outcome;
@@ -249,6 +274,7 @@ function fileTotals(snapshot: Snapshot, checks: ReadonlyMap<string, readonly Rec
       amountColumn,
       amounts,
       unsummed: amountColumn === null ? 0 : records.length - summed.length,
+      rowsByMoney,
       control,
       balanced: STATUSES.reduce((n, s) => n + rows[s], 0) === file.rowCount && control === "pass",
     };

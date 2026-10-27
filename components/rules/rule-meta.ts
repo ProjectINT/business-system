@@ -55,7 +55,8 @@ export const RULE_META: Readonly<Record<string, RuleMeta>> = {
     icon: Layers,
     group: "bookings",
     label: "Conflicting versions",
-    description: "The same id arrives with different content. A person picks the version that stands.",
+    description:
+      "The same id arrives with different content. A booking's latest updated_at stands by itself and older versions drop out; on a tie, and for other files, a person picks the version that stands.",
   },
   "DQ-01": {
     icon: Copy,
@@ -73,13 +74,8 @@ export const RULE_META: Readonly<Record<string, RuleMeta>> = {
     icon: Wallet,
     group: "payments",
     label: "Unpaid at check-in",
-    description: "A villa is paid in full before check-in; on check-in day part or all of the money was missing.",
-  },
-  "DQ-23": {
-    icon: Clock,
-    group: "payments",
-    label: "Paid after check-in",
-    description: "The payment came after check-in, though a villa is paid in full before arrival.",
+    description:
+      "A villa is paid in full by check-in, OTA bookings too; on check-in day part or all of the money was missing. Either it came later — how many days late — or it is still owed. For information: the money itself is already in the figures.",
   },
   "DQ-24": {
     icon: CircleQuestion,
@@ -97,13 +93,20 @@ export const RULE_META: Readonly<Record<string, RuleMeta>> = {
     icon: LinkSlash,
     group: "payments",
     label: "No valid reservation",
-    description: "The payment's reservation is missing or excluded, or still awaits a decision — then the payment waits with it.",
+    description:
+      "The payment's reservation is missing — the money is unallocated — or excluded, or still awaits a decision: then the money is held and the payment waits with it.",
   },
   "DQ-19": {
     tag: "VIL",
     group: "payments",
     label: "Villa mismatch",
     description: "The payment names a different villa than its reservation.",
+  },
+  "DQ-25": {
+    icon: Clock,
+    group: "payments",
+    label: "Not received yet",
+    description: "A pending payment is not money yet: held apart from what was received. Any other status is excluded, its amount held too.",
   },
   "DQ-15": {
     tag: "ZERO",
@@ -157,7 +160,8 @@ export const RULE_META: Readonly<Record<string, RuleMeta>> = {
     icon: Percent,
     group: "reference",
     label: "Commission rate gap",
-    description: "No management-fee rate is in force at check-in, or the rate changes during the stay.",
+    description:
+      "A night of the stay has no management-fee rate, or two rates that cannot be told apart. The booking is excluded until the rates are fixed; a rate change during the stay is fine — each night takes its own.",
   },
   "DQ-22": {
     tag: "RATE",

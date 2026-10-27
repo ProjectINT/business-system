@@ -15,7 +15,7 @@ export type Outcome = "pass" | "fail" | "skip" | "error";
  * What `fail` means for the row's status. `decide` — the row waits for a human decision;
  * `hold` — it waits for a decision on another row (a payment of a reservation under review).
  */
-export type Action = "duplicate" | "exclude" | "decide" | "hold" | "review" | "info";
+export type Action = "duplicate" | "supersede" | "exclude" | "decide" | "hold" | "review" | "info";
 
 export type Status = "clean" | "review" | "pending" | "excluded" | "duplicate" | "superseded";
 
@@ -137,7 +137,7 @@ export interface Verdict {
   readonly entity: RowEntity;
   readonly recordKey: string | null;
   readonly status: Status;
-  /** Rules that set the status; empty for `clean` and `superseded`. */
+  /** Rules that set the status; empty for `clean` and for a pending row displaced by a later batch (`superseded`, no rule). */
   readonly ruleIds: readonly RuleId[];
   /** Decision that set the status; `null` — a rule did. */
   readonly decisionId: string | null;

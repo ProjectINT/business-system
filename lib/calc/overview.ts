@@ -2,12 +2,12 @@ import { calculateAccruals } from "./accrual";
 import { itemize } from "./breakdown";
 import { calculateCashFlow } from "./cash";
 import { compareText } from "./order";
-import { estimateOwnerBalance } from "./owner-balance";
+import { estimateOwnerBalance, estimateOwnerShare } from "./owner-balance";
 import { assertPolicies, type CalcPolicies } from "./policies";
 import { assertSameCurrency, zero, type Money } from "./primitives/money";
 import { reconcile } from "./reconciliation";
 import { assertAdmitted, calculateReservations, collect } from "./reservation";
-import { assertExpenseStatus, assertScope } from "./scope";
+import { assertExpenseStatus, assertPaymentStatus, assertScope } from "./scope";
 import type {
   Breakdown,
   ExpenseInput,
@@ -35,6 +35,7 @@ function summarize(
     accruals,
     cashFlow: calculateCashFlow(payments, expenses, scope),
     reconciliation: reconcile(calcs, payments, scope, policies),
+    ownerEstimate: estimateOwnerShare(accruals),
     ownerBalance: estimateOwnerBalance(accruals),
   };
 }
@@ -54,6 +55,7 @@ function prepare(input: OverviewInput, scope: Scope, policies: CalcPolicies) {
     input.payments,
     (p) => {
       assertAdmitted(p, p.paymentId);
+      assertPaymentStatus(p.status, p.paymentId);
       assertBaseCurrency(p.amount, scope);
       return p;
     },

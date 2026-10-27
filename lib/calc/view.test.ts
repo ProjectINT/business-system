@@ -33,9 +33,12 @@ describe("toView", () => {
 
   it("keeps a reservation's shape", () => {
     const v = toView(calculateReservation(RES.R0020, RULES, DEFAULT_POLICIES));
-    expect(v.managementFee).toBe(612470);
-    expect(v.rate).toBe("0.17");
+    expect(v.managementFee).toBe(612471);
+    expect(v.rates).toEqual(["0.17"]);
+    expect(v.lines[0]?.rate).toBe("0.17");
     expect(v.lines[0]?.gross).toBe(1200923);
+    expectTypeOf(v.rates).toEqualTypeOf<string[]>();
+    expectTypeOf(v.lines[0]!.rate).toEqualTypeOf<string | null>();
   });
 
   it("refuses unsafe amounts and bare bigint", () => {

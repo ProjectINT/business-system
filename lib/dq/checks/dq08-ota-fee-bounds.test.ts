@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { describeContract } from "../testing/contract";
-import { apart, datasetFrom, PROPERTY, RESERVATION } from "../testing/fixture";
+import { COMMISSION_RULE, PROPERTY, RESERVATION, apart, datasetFrom } from "../testing/fixture";
 import { contextBefore, resultFor, runOn, skipsAlone, statusOf } from "../testing/run";
 import { dq08 } from "./dq08-ota-fee-bounds";
 
 const ds = datasetFrom({
   property: [PROPERTY],
+  commission_rule: [COMMISSION_RULE],
   reservation: apart([
     RESERVATION,
     { ...RESERVATION, reservation_id: "R0002", ota_fee: "-100000" },
@@ -34,7 +35,7 @@ describe("DQ-08", () => {
 
   it("skips a row already out, and alone rows whose fee or gross did not parse", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-08", "R0006").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-08", "R0006").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     const bad = datasetFrom({ reservation: [{ ...RESERVATION, ota_fee: "" }, { ...RESERVATION, reservation_id: "R0002", gross_booking_value: "" }] });
     expect(await skipsAlone(dq08, bad)).toEqual({ R0001: "ota_fee not parsed (DQ-03)", R0002: "gross_booking_value not parsed (DQ-03)" });
   });

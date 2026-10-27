@@ -97,6 +97,21 @@ describe("control totals on the sample files (PLAN.md 5.2)", () => {
     }
   });
 
+  it("payments by money: received + held + unallocated + excluded + duplicates = the file (PLAN.md 7.4)", () => {
+    const payments = q.files.find((f) => f.entity === "payment")!;
+    expect(payments.rowsByMoney).toEqual({ received: 73, held: 1, unallocated: 0, excluded: 1, duplicate: 1 }); // P0036; P0017; the copy of P0075
+    const [idrLine] = payments.amounts;
+    expect(idrLine!.byMoney).toEqual({
+      received: idr(511_162_604n), // the reconciliation of the whole period receives the same
+      held: idr(0n), // P0036, a zero payment of R0072
+      unallocated: idr(0n),
+      excluded: idr(12_727_390n), // P0017 (V999)
+      duplicate: idr(12_211_055n),
+    });
+    expect(Object.values(idrLine!.byMoney!).reduce((n, m) => n + m.amount, 0n)).toBe(idrLine!.source.amount); // 536 101 049, read without our loader
+    for (const f of q.files.filter((x) => x.entity !== "payment")) expect(f.rowsByMoney, f.fileName).toBeNull();
+  });
+
   it("DQ-90 counts the same rows by status", () => {
     for (const f of q.files) {
       const dq90 = q.checks.get(f.fileName)!.find((c) => c.ruleId === "DQ-90")!;
@@ -120,14 +135,14 @@ describe("per rule", () => {
     }
     expect(q.rules.map((r) => r.id)).toEqual(snapshot.rules.map((r) => r.id));
     expect(q.rules.reduce((n, r) => n + r.outcomes.fail, 0)).toBe(q.issues.length);
-    expect(q.issues.length).toBe(456);
+    expect(q.issues.length).toBe(398); // 456 before DQ-23 (58 late payments) merged into DQ-16
   });
 
   it("fails by action and the amount in question, in the rule's own terms", () => {
     const of = (id: string) => q.rules.find((r) => r.id === id)!;
     expect(of("DQ-05").failsByAction).toEqual({ hold: 42, exclude: 1 });
     expect(of("DQ-12")).toMatchObject({ failsByAction: { decide: 86 }, amount: idr(801_601_913n) }); // GBV in overlaps
-    expect(of("DQ-16")).toMatchObject({ failsByAction: { review: 113 }, amount: idr(884_893_552n) }); // shortfall at check-in
+    expect(of("DQ-16")).toMatchObject({ failsByAction: { info: 113 }, amount: idr(884_893_552n) }); // short at check-in when paid late, owed today when not
     expect(of("DQ-24")).toMatchObject({ failsByAction: { info: 64 } }); // confirmed, no payment: a note, no status
     expect(of("DQ-11")).toMatchObject({ failsByAction: { info: 30 }, amount: idr(0n) }); // marketing fee on direct bookings: information
     expect(of("DQ-15")).toMatchObject({ failsByAction: { info: 7 }, amount: idr(0n) }); // nothing to sum
@@ -279,11 +294,11 @@ describe("edge cases on small data", () => {
   });
 
   it("without DQ-90 the totals are shown but not confirmed", async () => {
-    const dataset = datasetFrom({ property: [PROPERTY], reservation: [RESERVATION] });
+    const dataset = datasetFrom({ property: [PROPERTY], commission_rule: [COMMISSION_RULE], reservation: [{ ...RESERVATION, ota_fee: "-1" }] });
     const report = await runOn(dataset, { checks: CHECKS.filter((c) => c.id !== "DQ-90") });
     const s = buildSnapshot({ source: { kind: "csv", label: "<memory>" }, dataset, report, checks: defaultRegistry().checks, policies: DEFAULT_POLICIES });
     const files = qualityOf(s).files;
     expect(files.map((f) => [f.control, f.balanced])).toEqual(ENTITIES.map(() => [null, false]));
-    expect(files.find((f) => f.entity === "reservation")!.rows.review).toBe(1); // unpaid at check-in
+    expect(files.find((f) => f.entity === "reservation")!.rows.review).toBe(1); // a negative OTA fee (DQ-08)
   });
 });

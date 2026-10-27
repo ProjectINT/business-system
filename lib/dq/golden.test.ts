@@ -5,7 +5,8 @@
 // Where a figure differs from the first analysis, a row that an earlier rule had already excluded
 // or marked duplicate is the reason: rules skip such rows, the first analysis counted raw rows.
 // DQ-11 30 (not 31: the copy of R0015), DQ-20 22 payments and 29 expenses (not 23 / 30: P0017 and
-// E0017 point at unknown villas), DQ-23 58 (not 60: P0017 and the copy of P0075).
+// E0017 point at unknown villas). Phase 6b: DQ-23 (58 late payments) is merged into DQ-16 v2, which is
+// information now: 49 rows it alone kept under review are clean (34 reservations, 15 payments on 19.10).
 import { describe, expect, it } from "vitest";
 import { loadDataset } from "../ingest";
 import { buildCases } from "./cases";
@@ -16,9 +17,6 @@ import { contextBefore, failedKeys, resultFor, resultsOf, runOn } from "./testin
 import type { JournalResult, RunReport, Status } from "./types";
 
 const sample = loadDataset();
-
-const keysOf = (results: readonly JournalResult[], outcome: string) =>
-  results.filter((r) => r.outcome === outcome).map((r) => r.recordKey!).sort();
 
 const unique = <T>(xs: readonly T[]) => [...new Set(xs)];
 
@@ -52,7 +50,7 @@ describe("reference run on 2026-10-19", async () => {
       "payments.csv:77",
       "reservations.csv:152",
     ]);
-    expect(status("R0015")).toEqual(["duplicate", "review"]); // line 152 sorts before line 16; the first copy is unpaid by check-in (DQ-16)
+    expect(status("R0015")).toEqual(["duplicate", "clean"]); // line 152 sorts before line 16; the first copy is unpaid by check-in (DQ-16, information)
     expect(failedKeys(report, "DQ-02")).toEqual([]);
   });
 
@@ -141,7 +139,7 @@ describe("reference run on 2026-10-19", async () => {
     const dq05 = resultsOf(report, "DQ-05");
     expect(dq05.filter((r) => r.outcome === "fail" && r.action === undefined).map((r) => r.recordKey)).toEqual(["P0036"]);
     expect(resultFor(report, "DQ-05", "P0036").details).toEqual({ reservationId: "R0072", problem: "reservation_excluded" });
-    expect(resultFor(report, "DQ-05", "P0017").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-05", "P0017").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     const held = dq05.filter((r) => r.action === "hold");
     expect(held).toHaveLength(42);
     expect(held.every((r) => r.outcome === "fail" && (r.details as { problem: string }).problem === "reservation_pending")).toBe(true);
@@ -166,10 +164,19 @@ describe("reference run on 2026-10-19", async () => {
     expect(failedKeys(report, "DQ-19")).toEqual([]);
   });
 
-  it("stage 4: DQ-16 113 reservations unpaid at check-in, 62 of them without a single payment", () => {
+  it("stage 4: DQ-16 113 reservations unpaid at check-in: 51 paid in full 1–11 days late, 62 without a single payment", () => {
     const fails = resultsOf(report, "DQ-16").filter((r) => r.outcome === "fail");
     expect(fails).toHaveLength(113);
     expect(fails.filter((r) => (r.details as { payments: number }).payments === 0)).toHaveLength(62);
+    const kind = (k: string) => fails.filter((r) => (r.details as { kind: string }).kind === k);
+    expect(kind("unpaid")).toHaveLength(62); // no part payments in the sample
+    expect(kind("paid_late")).toHaveLength(51);
+    const days = kind("paid_late").map((r) => (r.details as { daysLate: number }).daysLate);
+    expect([Math.min(...days), Math.max(...days)]).toEqual([1, 11]);
+    const total = (rs: readonly JournalResult[]) => rs.reduce((n, r) => n + r.amountIdr!, 0n);
+    expect(total(kind("paid_late"))).toBe(376_822_031n); // missing at check-in, came later
+    expect(total(kind("unpaid"))).toBe(508_071_521n); // owed as of today
+    expect(fails.every((r) => r.action === undefined)).toBe(true); // information: the rule's own action
     expect(fails.every((r) => (r.details as { paidByCheckIn: bigint; expected: bigint }).paidByCheckIn < (r.details as { expected: bigint }).expected)).toBe(true);
     expect(resultsOf(report, "DQ-16").filter((r) => r.reason === "check-in is still ahead")).toHaveLength(15);
   });
@@ -190,19 +197,18 @@ describe("reference run on 2026-10-19", async () => {
     const fails = resultsOf(report, "DQ-20").filter((r) => r.outcome === "fail");
     expect(fails.filter((r) => r.entity === "payment")).toHaveLength(16);
     expect(fails.filter((r) => r.entity === "expense")).toHaveLength(22);
-    expect(resultFor(report, "DQ-20", "P0017").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-20", "P0017").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
   });
 
-  it("stage 4: DQ-23 58 payments dated after check-in, 9 on the check-in day, none before", () => {
-    const dq23 = resultsOf(report, "DQ-23");
-    expect(keysOf(dq23, "fail")).toHaveLength(58);
-    expect(keysOf(dq23, "pass")).toHaveLength(9);
-    expect(dq23.filter((r) => r.outcome === "fail").every((r) => (r.details as { daysAfterCheckIn: number }).daysAfterCheckIn > 0)).toBe(true);
-    expect(resultsOf(report, "DQ-23").filter((r) => r.reason === "zero payment (DQ-15)")).toHaveLength(6);
+  it("stage 4: DQ-25 every payment is received; DQ-17 every night of every stay has its rule", () => {
+    expect(failedKeys(report, "DQ-25")).toEqual([]);
+    expect(resultsOf(report, "DQ-25").filter((r) => r.outcome === "pass")).toHaveLength(74); // 76 − P0017 (DQ-04) − the copy of P0075
+    expect(failedKeys(report, "DQ-17")).toEqual([]);
   });
 
-  it("row statuses: 137 clean, 81 review, 131 pending, 6 excluded, 2 duplicate", () => {
-    expect(report.summary.counts).toEqual({ clean: 137, review: 81, pending: 131, excluded: 6, duplicate: 2, superseded: 0 });
+  it("row statuses: 186 clean, 32 review, 131 pending, 6 excluded, 2 duplicate", () => {
+    // v1: 137 clean, 81 review — DQ-16 is information now and DQ-23 is merged into it
+    expect(report.summary.counts).toEqual({ clean: 186, review: 32, pending: 131, excluded: 6, duplicate: 2, superseded: 0 });
     const excluded = report.verdicts.filter((v) => v.status === "excluded").map((v) => v.recordKey).sort();
     expect(excluded).toEqual(["E0017", "P0017", "P0036", "R0034", "R0061", "R0072"]);
     const pending = report.verdicts.filter((v) => v.status === "pending");

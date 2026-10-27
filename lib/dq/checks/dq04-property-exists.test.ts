@@ -39,7 +39,7 @@ describe("DQ-04", () => {
 
   it("skips a row already out, and alone a row whose villa did not parse", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-04", "R0003").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-04", "R0003").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     expect(await skipsAlone(dq04, ds)).toEqual({ R0003: "property_id not parsed (DQ-03)" });
   });
 });

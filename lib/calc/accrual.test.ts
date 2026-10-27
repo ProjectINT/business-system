@@ -36,9 +36,11 @@ describe("calculateAccruals", () => {
       gross: idr(0n),
       refund: idr(0n),
       otaFee: idr(0n),
-      otaFeeByChannel: { OTA: idr(0n), Direct: idr(0n) },
+      otaFeeByChannel: { OTA: idr(0n), Direct: idr(0n), unknown: idr(0n) },
+      pbjt: idr(0n),
       netRental: idr(0n),
       managementFee: idr(0n),
+      ownerEstimate: idr(0n),
       operatingExpenses: idr(0n),
       cancellations: { count: 0, gross: idr(0n), refund: idr(0n), retained: idr(0n) },
     });
@@ -46,8 +48,13 @@ describe("calculateAccruals", () => {
 
   it("OTA fees split by the booking's channel: R0018 via OTA, R0020 direct (marketing fee, DQ-11)", () => {
     const a = calculateAccruals(calcs(RES.R0018, RES.R0020), [], scope({ period: SEPTEMBER }));
-    expect(a.otaFeeByChannel).toEqual({ OTA: idr(1124226n), Direct: idr(612470n) });
+    expect(a.otaFeeByChannel).toEqual({ OTA: idr(1124226n), Direct: idr(612470n), unknown: idr(0n) });
     expect(a.otaFee).toEqual(idr(1124226n + 612470n));
+  });
+
+  it("a booking without a channel (the event feed) goes to `unknown`, not guessed", () => {
+    const a = calculateAccruals(calcs({ ...RES.R0020, channel: null }), [], scope({ period: SEPTEMBER }));
+    expect(a.otaFeeByChannel).toEqual({ OTA: idr(0n), Direct: idr(0n), unknown: idr(612470n) });
   });
 
   it("includeReview=false drops review records; property filter", () => {

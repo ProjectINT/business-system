@@ -26,6 +26,16 @@ export interface FailedRule {
   readonly action: Action;
 }
 
+/**
+ * Where a payment's money goes (PLAN.md 7.4), exactly one kind per payment: `received` — in the cash
+ * figures (at level 1 a payment waiting with its reservation's case counts here, under review);
+ * `held` — known but not the villa's: `pending` (not money yet), an unknown status (DQ-25), or real
+ * money for a reservation the checks excluded (DQ-05); `unallocated` — its reservation is not in the
+ * data (DQ-05); `excluded` — the payment row itself is wrong (DQ-03, 04, 06); `duplicate` — a copy, or
+ * an older version, whose money another row carries.
+ */
+export type MoneyKind = "received" | "held" | "unallocated" | "excluded" | "duplicate";
+
 /** A source row with its final status: for /import/raw-data, the amounts outside the figures and the flags. */
 export interface RecordInfo {
   readonly unitId: string;
@@ -45,6 +55,8 @@ export interface RecordInfo {
    * (as reconciliation does), payment_date, expense_date. `null` for other entities or when it did not parse.
    */
   readonly date: CalendarDate | null;
+  /** Payments: the kind of money; `null` for the other entities. */
+  readonly money: MoneyKind | null;
 }
 
 /** A row the checks admitted that still cannot reach the calculator (an unknown currency). */

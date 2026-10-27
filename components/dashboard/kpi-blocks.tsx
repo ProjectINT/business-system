@@ -3,7 +3,7 @@
 // The three blocks of PLAN.md 7.4, each labelled with its basis so that revenue and cash are not
 // mixed: accruals by nights of stay, cash by payment date, reconciliation by check-out. A switch on
 // each block shows, next to every total, the part of it that records under review bring (with them −
-// without them).
+// without them). Held and unallocated money stand next to cash received, outside its sum.
 import { createContext, useContext, useState } from "react";
 import { Card, Chip, Link, Switch, Tooltip } from "@heroui/react";
 import { CircleInfo } from "@gravity-ui/icons";
@@ -23,6 +23,7 @@ interface Props {
   cancellations: View<Dashboard["cancellations"]>;
   ownerBalanceGaps: OwnerBalanceGap[];
   reconciliationHref: string;
+  apart: { held: number; heldCount: number; unallocated: number; unallocatedCount: number };
 }
 
 /** Whether the block around shows the under-review part of its totals. */
@@ -72,7 +73,7 @@ function Metric({
   );
 }
 
-/** OTA fees split by the booking's channel; the two parts add up to the row above. On Direct it is the marketing fee. */
+/** OTA fees split by the booking's channel; the parts add up to the row above. On Direct it is the marketing fee; without a channel (the event feed), its own line. */
 function OtaFees({ props }: { props: Props }) {
   return (
     <div className="pb-1.5">
@@ -96,7 +97,33 @@ function OtaFees({ props }: { props: Props }) {
             </Tooltip>
           }
         />
+        {(props.headline.otaFeeUnknown !== 0 || props.underReview.otaFeeUnknown !== 0) && (
+          <Metric label="Channel unknown" field="otaFeeUnknown" props={props} nested />
+        )}
       </div>
+    </div>
+  );
+}
+
+/** Money we know of that is not the villas': next to cash received, not in it. */
+function ApartMetric({ label, amount, payments, hint }: { label: string; amount: number; payments: number; hint: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-1.5">
+      <span className="flex items-center gap-2 text-sm text-muted">
+        {label}
+        <Tooltip delay={150}>
+          <Tooltip.Trigger aria-label={`About ${label.toLowerCase()}`}>
+            <CircleInfo className="size-3 cursor-help" />
+          </Tooltip.Trigger>
+          <Tooltip.Content className="max-w-xs">{hint}</Tooltip.Content>
+        </Tooltip>
+      </span>
+      <span className="flex flex-col items-end leading-tight">
+        <span className="tabular-nums">{idrFull(amount)}</span>
+        <span className="text-xs text-muted">
+          {count(payments)} {payments === 1 ? "payment" : "payments"} · not in cash received
+        </span>
+      </span>
     </div>
   );
 }
@@ -193,8 +220,11 @@ export function KpiBlocks(props: Props) {
           "otaFee",
           "otaFeeOta",
           "otaFeeDirect",
+          "otaFeeUnknown",
+          "pbjt",
           "netRental",
           "managementFee",
+          "ownerEstimate",
           "operatingExpenses",
           "ownerBalance",
         ]}
@@ -210,10 +240,33 @@ export function KpiBlocks(props: Props) {
       >
         <Hero label="Gross bookings" field="gross" props={props} />
         <div className="flex flex-col divide-y divide-separator">
+          <Metric
+            label="PBJT payable"
+            field="pbjt"
+            props={props}
+            extra={
+              <Tooltip delay={150}>
+                <Tooltip.Trigger aria-label="About PBJT">
+                  <CircleInfo className="size-3 cursor-help" />
+                </Tooltip.Trigger>
+                <Tooltip.Content className="max-w-xs">
+                  The local tax on the stay, collected with it and owed to the state: not revenue, not in the management fee or
+                  the owner estimate. The CSV files carry none.
+                </Tooltip.Content>
+              </Tooltip>
+            }
+          />
           <Metric label="Refunds" field="refund" props={props} />
           <OtaFees props={props} />
           <Metric label="Net rental" field="netRental" props={props} strong />
           <Metric label="Management fees" field="managementFee" props={props} />
+          <Metric
+            label="Owner estimate"
+            field="ownerEstimate"
+            props={props}
+            strong
+            extra={<EstimateChip gaps={props.ownerBalanceGaps} />}
+          />
           <Metric label="Operating expenses" field="operatingExpenses" props={props} />
           <Metric
             label="Owner balance"
@@ -240,6 +293,18 @@ export function KpiBlocks(props: Props) {
         <div className="flex flex-col divide-y divide-separator">
           <Metric label="Paid expenses" field="paidExpenses" props={props} />
           <Metric label="Net cash flow" field="netCashFlow" props={props} strong />
+          <ApartMetric
+            label="Held"
+            amount={props.apart.held}
+            payments={props.apart.heldCount}
+            hint="Pending payments, which are not money yet, and payments for reservations the checks keep out of the figures: real money, not the villa's until the reservation is in."
+          />
+          <ApartMetric
+            label="Unallocated"
+            amount={props.apart.unallocated}
+            payments={props.apart.unallocatedCount}
+            hint="Payments for a reservation that is not in the data: kept, never counted as the villa's revenue."
+          />
         </div>
       </Block>
 

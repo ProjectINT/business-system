@@ -43,7 +43,7 @@ describe("DQ-09", () => {
 
   it("skips a row already out, and alone rows whose refund, gross or status did not parse", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-09", "R0008").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-09", "R0008").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     const bad = datasetFrom({
       reservation: [
         { ...RESERVATION, refund_amount: "" },

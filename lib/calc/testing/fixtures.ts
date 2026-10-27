@@ -1,7 +1,7 @@
 // Records copied verbatim from Technical_Challenge_Data (fixtures.test.ts checks that they still match)
 // and parsed with the module's own parsers, as the import will do.
 import { parseDate, period, type CalendarDate } from "../primitives/calendar";
-import { parseCurrency, parseMoney } from "../primitives/money";
+import { parseCurrency, parseMoney, zero } from "../primitives/money";
 import { parseRate } from "../primitives/rate";
 import type {
   CommissionRuleInput,
@@ -74,6 +74,7 @@ export function reservationFromRow(row: string): ReservationInput {
     checkOut: d(checkOut as string),
     status: status as ReservationInput["status"],
     gross: parseMoney(gross as string, cur),
+    pbjt: zero(cur), // the CSV has no PBJT
     otaFee: parseMoney(ota as string, cur),
     refund: parseMoney(refund as string, cur),
     channel: channel as ReservationInput["channel"],
@@ -93,13 +94,14 @@ export function ruleFromRow(row: string): CommissionRuleInput {
 }
 
 export function paymentFromRow(row: string): PaymentInput {
-  const [id, reservation, property, date, amount, currency] = cells(row, 7);
+  const [id, reservation, property, date, amount, currency, status] = cells(row, 7);
   return {
     paymentId: id as string,
     reservationId: reservation as string,
     propertyId: property as string,
     paymentDate: d(date as string),
     amount: parseMoney(amount as string, parseCurrency(currency as string)),
+    status: status as PaymentInput["status"],
     dqStatus: "clean",
   };
 }

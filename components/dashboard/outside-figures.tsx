@@ -1,7 +1,8 @@
 "use client";
 
 // What the checks kept out of the figures for this selection (PLAN.md 5.2): excluded and duplicate
-// rows by file, with their amounts — no rupiah leaves the figures silently.
+// rows by file, with their amounts — no rupiah leaves the figures silently. Held and unallocated
+// payments are not here: the cash block shows them next to cash received (PLAN.md 7.4).
 import { Card, Chip, Link } from "@heroui/react";
 import type { View } from "@/lib/calc";
 import type { OutsideGroup } from "@/lib/data";
@@ -16,7 +17,7 @@ const ENTITY_LABEL: Record<OutsideGroup["entity"], [string, string]> = {
 function label(g: View<OutsideGroup>): string {
   const noun = ENTITY_LABEL[g.entity][g.count === 1 ? 0 : 1];
   if (g.status === "duplicate") return `${count(g.count)} duplicate ${noun} dropped`;
-  return g.entity === "payment" ? `${count(g.count)} unallocated ${noun}` : `${count(g.count)} excluded ${noun}`;
+  return `${count(g.count)} excluded ${noun}`;
 }
 
 export function OutsideFigures({ groups, keys }: { groups: View<OutsideGroup>[]; keys: string[] }) {

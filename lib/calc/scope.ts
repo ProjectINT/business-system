@@ -2,7 +2,7 @@ import { CalcError } from "./errors";
 import { period } from "./primitives/calendar";
 import { parseCurrency } from "./primitives/money";
 import { assertAdmitted } from "./reservation";
-import type { DqStatus, ExpenseStatus, Scope } from "./types";
+import type { DqStatus, ExpenseStatus, PaymentStatus, Scope } from "./types";
 
 export function assertScope(scope: Scope): void {
   period(scope.period.from, scope.period.to);
@@ -28,5 +28,13 @@ export function assertExpenseStatus(status: string, expenseId: string): void {
       expenseId,
       paymentStatus: status,
     });
+  }
+}
+
+const PAYMENT_STATUSES: readonly string[] = ["received", "pending"] satisfies PaymentStatus[];
+
+export function assertPaymentStatus(status: string, paymentId: string): void {
+  if (!PAYMENT_STATUSES.includes(status)) {
+    throw new CalcError("UNKNOWN_STATUS", `Payment ${paymentId} has unknown status ${status}`, { paymentId, status });
   }
 }

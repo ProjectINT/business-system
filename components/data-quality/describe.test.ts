@@ -16,7 +16,7 @@ function fails(report: RunReport) {
 group("describe", () => {
   it("words every problem of the sample files from its facts", async () => {
     const q = qualityOf(await sampleSnapshot());
-    expect(q.issues).toHaveLength(456);
+    expect(q.issues).toHaveLength(398); // 456 before DQ-23 (58 late payments) merged into DQ-16
     for (const i of q.issues) {
       const text = describe(i.ruleId, i.result);
       expect(text, `${i.ruleId} ${i.record.unitId}`).toBeTruthy();
@@ -30,9 +30,9 @@ group("describe", () => {
     expect(text("DQ-08", "R0102")).toBe("OTA fee -100,000 is outside 0 … GBV 3,898,667");
     expect(text("DQ-09", "R0072")).toBe("Refund 7,970,068: the refund is above GBV 7,070,068; a refund on a confirmed reservation");
     expect(text("DQ-12", "R0017")).toBe("Overlaps R0096 2026-09-09 → 2026-09-11 (2 nights, partial), R0102 2026-09-10 → 2026-09-11 (1 night, partial)");
-    expect(text("DQ-14", "P0051")).toBe("Paid 3,998,667 as GBV − OTA − refund gives, but more than GBV 3,898,667");
+    expect(text("DQ-14", "P0051")).toBe("Paid 3,998,667 as GBV + PBJT − OTA − refund gives, but more than GBV 3,898,667");
     expect(text("DQ-16", "R0017")).toBe("Nothing paid; 8,458,500 was due by check-in 2026-09-09");
-    expect(text("DQ-23", "P0048")).toBe("Paid 2026-09-07, 1 day after check-in 2026-09-06, before check-out");
+    expect(text("DQ-16", "R0096")).toBe("Paid in full on 2026-09-07, 1 day after check-in 2026-09-06 · 5,957,178 was missing at check-in");
     expect(text("DQ-24", "R0017")).toBe("Confirmed, but no payment on file · checked in 2026-09-09, 40 days ago");
     expect(text("DQ-24", "R0035")).toBe("Confirmed, but no payment on file · check-in 2026-10-20, in 1 day");
   });
@@ -51,9 +51,17 @@ group("describe", () => {
         ]),
         { ...RESERVATION, reservation_id: "R0001", updated_at: "2026-09-05" }, // a second version of R0001
         { ...RESERVATION, reservation_id: "R0002", check_in: "2026-13-01" },
-        { ...RESERVATION, reservation_id: "R0005", check_in: "2026-09-28", check_out: "2026-10-03" }, // the rate changes inside
+        { ...RESERVATION, reservation_id: "R0005", check_in: "2026-09-28", check_out: "2026-10-03" }, // two rules from 01.10
+        { ...RESERVATION, reservation_id: "R0008", check_in: "2026-09-21", check_out: "2026-09-24" }, // part paid late, the rest still owed
       ],
-      payment: [{ ...PAYMENT, payment_id: "P0002", reservation_id: "R0004", property_id: "V002", amount: "2999999" }],
+      payment: [
+        { ...PAYMENT, payment_id: "P0002", reservation_id: "R0004", property_id: "V002", amount: "2999999" },
+        { ...PAYMENT, payment_id: "P0003" },
+        { ...PAYMENT, payment_id: "P0003", amount: "1" }, // two versions of a payment: no updated_at, a human decides
+        { ...PAYMENT, payment_id: "P0004", reservation_id: "R0007", property_id: "V002", status: "pending" },
+        { ...PAYMENT, payment_id: "P0005", reservation_id: "R0007", property_id: "V002", status: "refunded" },
+        { ...PAYMENT, payment_id: "P0006", reservation_id: "R0008", payment_date: "2026-09-22", amount: "1000000" },
+      ],
     });
     const report = await runOn(ds);
     const words = new Map<string, string | null>();
@@ -62,15 +70,21 @@ group("describe", () => {
       if (!words.has(key)) words.set(key, describe(ruleId, r)); // the first row of a key
     }
     for (const [key, text] of words) expect(text, key).not.toMatch(BROKEN);
-    expect(words.get("DQ-02 R0001")).toBe("2 versions of this id with different content · updated_at 2026-09-01");
+    expect(words.get("DQ-02 R0001")).toBe("Older version, updated_at 2026-09-01: the one of 2026-09-05 stands");
+    expect(words.get("DQ-02 P0003")).toBe("2 versions of this id with different content · updated_at empty");
     expect(words.get("DQ-03 R0002")).toBe("check_in: not a calendar date YYYY-MM-DD (“2026-13-01”)");
     expect(words.get("DQ-07 R0003")).toBe("GBV 0 for 3 nights");
     expect(words.get("DQ-10 R0004")).toBe("OTA fee 1,000,001 is 25.00 % of GBV 4,000,000, above 25.00 %");
-    expect(words.get("DQ-17 R0005")).toBe("Rate 0.15 at check-in becomes 0.17 from 2026-10-01");
-    expect(words.get("DQ-17 R0007")).toBe("No commission rule in force on check-in 2026-09-17");
+    expect(words.get("DQ-17 R0005")).toBe("Several commission rules in force on the night of 2026-10-01, none can be chosen");
+    expect(words.get("DQ-17 R0007")).toBe("No commission rule in force on the night of 2026-09-17");
+    expect(words.get("DQ-16 R0008")).toBe("Paid 0 of 2,550,000 by check-in 2026-09-21, 1,000,000 later · still owed 1,550,000");
+    expect(words.get("DQ-25 P0004")).toBe("Pending: not received yet, held apart from what was received");
+    expect(words.get("DQ-25 P0005")).toBe("Status “refunded” is neither received nor pending: excluded, the amount held");
     expect(words.get("DQ-18 R0006")).toBe("Cancelled with a partial refund: 1,000,000 of 3,000,000 refunded, 2,000,000 retained");
     expect(words.get("DQ-19 P0002")).toBe("Payment on villa V002, its reservation on V001");
-    expect(words.get("DQ-22 V001@2026-09-01")).toBe("Rate 0.15; overlaps V001@2026-10-01 2026-10-01 → open end, where V001@2026-10-01 applies");
+    expect(words.get("DQ-22 V001@2026-09-01")).toBe(
+      "Rate 0.15; overlaps V001@2026-10-01 2026-10-01 → open end, no rate there: stays with those nights are excluded (DQ-17)",
+    );
   });
 
   it("a pass says nothing, a skip or an error gives its reason; an unknown rule still says it failed", () => {

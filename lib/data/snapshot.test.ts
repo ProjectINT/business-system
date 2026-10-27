@@ -51,16 +51,18 @@ describe("buildSnapshot", () => {
       date: "2026-09-13", // check-out
     });
     expect(byKey.get("R0002")).toMatchObject({
-      status: "review",
-      ruleIds: ["DQ-16"], // no payment by check-in; DQ-11 (marketing fee) and DQ-24 (confirmed, no payment) are information and set no status
+      status: "clean",
+      ruleIds: [], // unpaid at check-in (DQ-16), a marketing fee (DQ-11), confirmed with no payment (DQ-24): information, no status
       failed: [
         { ruleId: "DQ-11", action: "info" },
-        { ruleId: "DQ-16", action: "review" },
+        { ruleId: "DQ-16", action: "info" },
         { ruleId: "DQ-24", action: "info" },
       ],
     });
-    expect(byKey.get("P0002")).toMatchObject({ status: "excluded", ruleIds: ["DQ-03"], amount: null, date: "2026-09-10" });
-    expect(byKey.get("P0003")).toMatchObject({ status: "excluded", failed: [{ ruleId: "DQ-05", action: "exclude" }] });
+    expect(byKey.get("P0001")).toMatchObject({ status: "clean", money: "received" });
+    expect(byKey.get("P0002")).toMatchObject({ status: "excluded", ruleIds: ["DQ-03"], amount: null, date: "2026-09-10", money: "excluded" });
+    expect(byKey.get("P0003")).toMatchObject({ status: "excluded", failed: [{ ruleId: "DQ-05", action: "exclude" }], money: "unallocated" });
+    expect(byKey.get("R0001")!.money).toBeNull(); // the kind of money is a payment's
     expect(byKey.get("E0001")).toMatchObject({ status: "excluded", ruleIds: ["DQ-06"], amount: { amount: 25000000n, currency: "USD" } });
     expect(byKey.get("V001")).toMatchObject({ entity: "property", propertyId: "V001", amount: null, date: null });
     expect(byKey.get("V001@2026-09-01")).toMatchObject({ entity: "commission_rule", propertyId: "V001", amount: null, date: null });

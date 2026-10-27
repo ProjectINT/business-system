@@ -1,18 +1,11 @@
 // Figures of the reconciliation page (PLAN.md 8, page 2): reservations reconciled in the period —
-// expected, received, difference, status — and, apart, payments that reached no reservation.
-import {
-  add,
-  inPeriod,
-  sub,
-  zero,
-  type CalendarDate,
-  type Money,
-  type ReconciliationStatus,
-  type ReservationInput,
-} from "../calc";
+// expected, received, difference, status — and, apart, the money the villas do not get: held and
+// unallocated payments (PLAN.md 7.4), the same lists the overview sums.
+import { sub, type CalendarDate, type Money, type ReconciliationStatus, type ReservationInput } from "../calc";
 import type { RuleId, Status } from "../dq";
 import { overviewOf, type Dashboard } from "./dashboard";
-import { BASE_CURRENCY, selectedProperties, type Filters } from "./filters";
+import { selectedProperties, type Filters } from "./filters";
+import { apartOf, type Apart } from "./money";
 import type { Snapshot } from "./types";
 
 export interface ReconciliationRow {
@@ -33,16 +26,6 @@ export interface ReconciliationRow {
   readonly paymentIds: readonly string[];
 }
 
-export interface UnallocatedPayment {
-  readonly paymentId: string | null;
-  readonly reservationId: string | null;
-  readonly propertyId: string | null;
-  readonly paymentDate: CalendarDate | null;
-  readonly amount: Money | null;
-  /** Rules that excluded the payment: DQ-04 unknown villa, DQ-05 missing or excluded reservation. */
-  readonly ruleIds: readonly RuleId[];
-}
-
 export interface ReconciliationView {
   readonly filters: Filters;
   readonly expected: Money;
@@ -52,9 +35,8 @@ export interface ReconciliationView {
   /** with − without records under review, as on the overview. */
   readonly underReview: { readonly expected: Money; readonly received: Money; readonly difference: Money };
   readonly rows: readonly ReconciliationRow[];
-  readonly unallocated: readonly UnallocatedPayment[];
-  /** Sum of the unallocated payments in the base currency. */
-  readonly unallocatedAmount: Money;
+  /** Held and unallocated payments of the selection, with the reason. */
+  readonly apart: Apart;
   readonly failures: Dashboard["failures"];
 }
 
@@ -72,7 +54,7 @@ export function reconciliationOf(snapshot: Snapshot, filters: Filters): Reconcil
   const recordOf = new Map(admitted.map((r) => [r.recordKey, r]));
   const payments = new Map<string, string[]>();
   for (const p of snapshot.input.payments) {
-    if (p.dqStatus === "review" && !filters.includeReview) continue;
+    if (p.status !== "received" || (p.dqStatus === "review" && !filters.includeReview)) continue;
     payments.set(p.reservationId, [...(payments.get(p.reservationId) ?? []), p.paymentId]);
   }
 
@@ -96,23 +78,6 @@ export function reconciliationOf(snapshot: Snapshot, filters: Filters): Reconcil
   });
 
   const selected = selectedProperties(filters, snapshot);
-  const unallocated: UnallocatedPayment[] = [];
-  let unallocatedAmount = zero(BASE_CURRENCY);
-  for (const r of snapshot.records) {
-    if (r.entity !== "payment" || r.status !== "excluded") continue;
-    if (selected !== "all" && (r.propertyId === null || !selected.has(r.propertyId))) continue;
-    if (r.date !== null && !inPeriod(filters.period, r.date)) continue;
-    const row = snapshot.dataset.rows.payment.find((p) => p.unitId === r.unitId)!;
-    unallocated.push({
-      paymentId: r.recordKey,
-      reservationId: row.values.reservation_id,
-      propertyId: r.propertyId,
-      paymentDate: r.date,
-      amount: r.amount,
-      ruleIds: r.ruleIds,
-    });
-    if (r.amount !== null && r.amount.currency === BASE_CURRENCY) unallocatedAmount = add(unallocatedAmount, r.amount);
-  }
 
   return {
     filters,
@@ -126,8 +91,7 @@ export function reconciliationOf(snapshot: Snapshot, filters: Filters): Reconcil
       difference: sub(withReview.difference, withoutReview.difference),
     },
     rows,
-    unallocated,
-    unallocatedAmount,
+    apart: apartOf(snapshot, filters),
     failures: {
       calc: (filters.includeReview ? on : off).failures,
       data: snapshot.failures.filter((f) => selected === "all" || selected.has(f.propertyId)),

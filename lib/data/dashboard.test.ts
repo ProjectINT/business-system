@@ -11,7 +11,7 @@ const snapshot = await snapshotOf({
   commission_rule: [COMMISSION_RULE, { ...COMMISSION_RULE, property_id: "V002" }, { ...COMMISSION_RULE, property_id: "V009" }],
   reservation: [
     RESERVATION, // V001, clean, paid on check-in
-    { ...RESERVATION, reservation_id: "R0002", property_id: "V002", check_in: "2026-09-20", check_out: "2026-09-22" }, // no payment: DQ-16 review
+    { ...RESERVATION, reservation_id: "R0002", property_id: "V002", check_in: "2026-09-20", check_out: "2026-09-22", status: "modified" }, // no payment; DQ-13 pending — under review at level 1
     { ...RESERVATION, reservation_id: "R0003", property_id: "V777", check_in: "2026-09-24", check_out: "2026-09-26" }, // DQ-04 excluded
     { ...RESERVATION, reservation_id: "R0004", check_in: "2026-09-27", check_out: "2026-09-28", currency: "USD" }, // DQ-06 excluded
     { ...RESERVATION, reservation_id: "R0005", check_in: "2026-09-29", check_out: "soon" }, // DQ-03, no date
@@ -118,5 +118,33 @@ describe("headline", () => {
     const zero = headlineDiff(h, h);
     expect(Object.values(zero).every((v) => (typeof v === "number" ? v === 0 : v.amount === 0n))).toBe(true);
     expect(Object.keys(zero)).toEqual(Object.keys(h));
+  });
+});
+
+describe("money apart from cash received (PLAN.md 7.4)", () => {
+  it("a pending payment and one for an excluded reservation are held; one for a missing reservation is unallocated; none is received", async () => {
+    const s = await snapshotOf({
+      property: [PROPERTY],
+      commission_rule: [COMMISSION_RULE],
+      reservation: [RESERVATION, { ...RESERVATION, reservation_id: "R0002", property_id: "V777", check_in: "2026-09-20", check_out: "2026-09-22" }],
+      payment: [
+        PAYMENT, // received
+        { ...PAYMENT, payment_id: "P0002", amount: "100", status: "pending" },
+        { ...PAYMENT, payment_id: "P0003", reservation_id: "R0002", amount: "200" }, // R0002 excluded (DQ-04)
+        { ...PAYMENT, payment_id: "P0004", reservation_id: "R0099", amount: "300" },
+      ],
+    });
+    const d = dashboardOf(s, filtersOf(s));
+    expect(d.headline.received).toEqual(idr(2550000n));
+    expect(d.headline.pending).toEqual(idr(100n));
+    expect(d.apart.held.map((p) => [p.paymentId, p.reason])).toEqual([
+      ["P0002", "pending"],
+      ["P0003", "reservation_excluded"],
+    ]);
+    expect(d.apart.heldAmount).toEqual(idr(300n)); // 100 pending + 200 for the excluded reservation
+    expect(d.apart.unallocated.map((p) => [p.paymentId, p.reason])).toEqual([["P0004", "missing"]]);
+    expect(d.apart.unallocatedAmount).toEqual(idr(300n));
+    expect(d.outside.records.map((r) => r.recordKey)).toEqual(["R0002"]); // held and unallocated payments are not "outside"
+    expect(s.records.filter((r) => r.entity === "payment").map((r) => r.money)).toEqual(["received", "held", "held", "unallocated"]);
   });
 });

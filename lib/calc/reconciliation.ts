@@ -27,8 +27,8 @@ function paymentDueDate(calc: ReservationCalc, policies: CalcPolicies): Calendar
 }
 
 /**
- * Expected payout vs all payments of the reservation, whatever their date. Exact comparison, no
- * tolerance. A shortfall is `not_due` only while the due date (policy) is after today.
+ * Expected payout vs the `received` payments of the reservation, whatever their date; `pending` is not
+ * money yet. Exact comparison, no tolerance. A shortfall is `not_due` only while the due date (policy) is after today.
  */
 export function reconcileReservation(
   calc: ReservationCalc,
@@ -38,7 +38,7 @@ export function reconcileReservation(
 ): ReconciliationLine {
   const expected = calc.expectedPayout;
   const received = sum(
-    payments.filter((p) => p.reservationId === calc.reservationId).map((p) => p.amount),
+    payments.filter((p) => p.reservationId === calc.reservationId && p.status === "received").map((p) => p.amount),
     expected.currency,
   );
   const cmp = compare(received, expected);

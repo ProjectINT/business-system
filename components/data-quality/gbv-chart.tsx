@@ -69,7 +69,7 @@ export function GbvChart({ data }: { data: GbvPoint[] }) {
       <Card.Header className="flex-row flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <Card.Title>Gross bookings by villa</Card.Title>
-          <Card.Description>Nights of stay over the whole data range; overlaps and unpaid stays are under review</Card.Description>
+          <Card.Description>Nights of stay over the whole data range; overlaps and modified bookings are under review</Card.Description>
         </div>
         <ul className="flex items-center gap-4 text-sm" aria-label="Legend">
           {SERIES.map((s) => (

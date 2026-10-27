@@ -12,6 +12,12 @@ export interface CalcPolicies {
    * log 2026-10-18), so only a stay that has not started by today is `not_due`; 'check_out' — by the end of the stay.
    */
   readonly paymentDue: "check_in" | "check_out";
+  /**
+   * Two rules of a villa with different start dates in force on one night: 'ambiguous' — no rate,
+   * the reservation is out (ТЗ п. 14 of the final test; PLAN.md decision log 2026-10-27); 'latest-start'
+   * — the later effective_from wins (PLAN.md decision log 2026-10-18, overruled 2026-10-27).
+   */
+  readonly commissionRuleOverlap: "latest-start" | "ambiguous";
 }
 
 export const DEFAULT_POLICIES: CalcPolicies = Object.freeze({
@@ -19,6 +25,7 @@ export const DEFAULT_POLICIES: CalcPolicies = Object.freeze({
   rounding: "half-up",
   reconciliationDate: "check_out",
   paymentDue: "check_in",
+  commissionRuleOverlap: "ambiguous",
 });
 
 const ALLOWED: { readonly [K in keyof CalcPolicies]: readonly CalcPolicies[K][] } = {
@@ -26,6 +33,7 @@ const ALLOWED: { readonly [K in keyof CalcPolicies]: readonly CalcPolicies[K][] 
   rounding: ["half-up", "half-even"],
   reconciliationDate: ["check_out", "last_night"],
   paymentDue: ["check_in", "check_out"],
+  commissionRuleOverlap: ["latest-start", "ambiguous"],
 };
 
 /** Policies come from the caller, so they are checked at runtime too. */

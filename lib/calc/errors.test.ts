@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateManagementFee, resolveCommissionRule } from "./commission";
+import { managementFeeForNight, resolveCommissionRule } from "./commission";
 import { assertNever, CALC_ERROR_CODES, CalcError, invariant, isCalcError, type CalcErrorCode } from "./errors";
 import { assertPolicies, DEFAULT_POLICIES, type CalcPolicies } from "./policies";
 import { allocate, allocateByWeights } from "./primitives/allocate";
@@ -28,10 +28,10 @@ const TRIGGERS = {
   INVALID_STAY: () => calculateReservation(synthetic({ checkOut: synthetic().checkIn }), RULES, DEFAULT_POLICIES),
   EMPTY_ALLOCATION: () => allocate(idr(1n), 0),
   INVALID_WEIGHTS: () => allocateByWeights(idr(1n), [0n, 0n]),
-  NO_COMMISSION_RULE: () => resolveCommissionRule(RULES, "V011", date("2027-01-05")),
-  AMBIGUOUS_COMMISSION_RULE: () => resolveCommissionRule([rule, rule], rule.propertyId, rule.effectiveFrom),
+  NO_COMMISSION_RULE: () => resolveCommissionRule(RULES, "V011", date("2027-01-05"), "ambiguous"),
+  AMBIGUOUS_COMMISSION_RULE: () => resolveCommissionRule([rule, rule], rule.propertyId, rule.effectiveFrom, "latest-start"),
   UNSUPPORTED_FEE_BASIS: () =>
-    calculateManagementFee({ gross: idr(1n) }, { ...rule, feeBasis: "net_revenue" as "gross_booking_value" }, "half-up"),
+    managementFeeForNight(idr(1n), { ...rule, feeBasis: "net_revenue" as "gross_booking_value" }, "half-up"),
   UNKNOWN_STATUS: () =>
     calculateReservation(synthetic({ status: "pending" as ReservationInput["status"] }), RULES, DEFAULT_POLICIES),
   INVALID_POLICY: () => assertPolicies({ ...DEFAULT_POLICIES, rounding: "up" as CalcPolicies["rounding"] }),

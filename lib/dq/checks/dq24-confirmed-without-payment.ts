@@ -1,19 +1,20 @@
-// DQ-24 confirmedWithoutPayment: a confirmed reservation with no payment at all. A booking is
+// DQ-24 confirmedWithoutPayment: a confirmed reservation with no received payment. A booking is
 // confirmed when it is paid (2026-10-19), so either the payment has not reached the data yet or the
 // status is wrong. Information only, whatever the check-in date: a debt at check-in is DQ-16's. A
 // modified booking is not checked: its payment may sit on the original booking until a person links them.
+// A `pending` payment is not a payment yet (DQ-25); the payout counts PBJT (v2).
 import { nightsBetween, type CalendarDate } from "../../calc";
 import type { Check, CheckContext, CheckResult } from "../types";
 import { expectedPayout, fail, isOutUnit, pass, paymentsByReservation, skip, SKIP } from "./common";
 
 export const dq24: Check = {
   id: "DQ-24",
-  version: 1,
+  version: 2,
   title: "Confirmed without payment",
   entity: "reservation",
   action: "info",
   engine: "ts",
-  dependsOn: ["DQ-05"],
+  dependsOn: ["DQ-05", "DQ-25"],
   async run(ctx: CheckContext): Promise<CheckResult[]> {
     const payments = paymentsByReservation(ctx);
     return ctx.units("reservation").map((u) => {

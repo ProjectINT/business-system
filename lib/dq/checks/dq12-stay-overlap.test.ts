@@ -68,8 +68,8 @@ describe("DQ-12 boundaries (9.3)", () => {
     const report = await runOn(ds);
     expect(resultFor(report, "DQ-12", "R0009")).toMatchObject({ outcome: "skip", reason: "cancelled reservation" });
     expect(resultFor(report, "DQ-12", "R0010").outcome).toBe("pass");
-    expect(resultFor(report, "DQ-12", "R0011").reason).toBe("row excluded or duplicate by an earlier rule");
-    expect(resultFor(report, "DQ-12", "R0012").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-12", "R0011").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
+    expect(resultFor(report, "DQ-12", "R0012").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     expect(resultFor(report, "DQ-12", "R0013").outcome).toBe("pass");
     expect(statusOf(report, "R0013")).toBe("clean");
   });
@@ -85,6 +85,7 @@ describe("DQ-12 boundaries (9.3)", () => {
   it("two live versions of one id (DQ-02) each pair with the others, never with each other", async () => {
     const versions = datasetFrom({
       property: [PROPERTY],
+      commission_rule: [COMMISSION_RULE],
       reservation: [res("R0001", "2026-09-01", "2026-09-05"), res("R0001", "2026-09-02", "2026-09-06"), res("R0002", "2026-09-04", "2026-09-08")],
     });
     const report = await runOn(versions);

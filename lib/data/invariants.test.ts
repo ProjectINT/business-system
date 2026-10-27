@@ -17,8 +17,10 @@ const ids = snapshot.properties.map((p) => p.propertyId);
 
 const MONEY_FIELDS = [
   "gross",
+  "pbjt",
   "otaFee",
   "managementFee",
+  "ownerEstimate",
   "operatingExpenses",
   "ownerBalance",
   "received",
@@ -79,19 +81,21 @@ describe("invariants under random filters", () => {
 
   it("the records behind each figure of a row add up to it, clean and under review", () => {
     const sum = (list: readonly { amount: Money }[]) => list.reduce((n, x) => n + x.amount.amount, 0n);
-    const stays = (s: PropertySources, key: "gross" | "otaFee" | "managementFee") =>
+    const stays = (s: PropertySources, key: "gross" | "pbjt" | "otaFee" | "managementFee") =>
       s.stays.reduce((n, x) => n + x[key].amount, 0n);
     const expectMadeOf = (f: PropertyFigures, s: PropertySources) => {
       expect(s.stays.reduce((n, x) => n + x.nights, 0)).toBe(f.nights);
       expect(stays(s, "gross")).toBe(f.gross.amount);
+      expect(stays(s, "pbjt")).toBe(f.pbjt.amount);
       expect(stays(s, "otaFee")).toBe(f.otaFee.amount);
       expect(stays(s, "managementFee")).toBe(f.managementFee.amount);
       expect(sum(s.expenses)).toBe(f.operatingExpenses.amount);
       expect(sum(s.payments)).toBe(f.received.amount);
       expect(s.reconciliation.reduce((n, l) => n + l.difference.amount, 0n)).toBe(f.difference.amount);
-      // owner balance = gross − refunds − OTA fees − management fees − expenses
-      const balance = f.gross.amount - s.refund.amount - f.otaFee.amount - f.managementFee.amount - f.operatingExpenses.amount;
-      expect(balance).toBe(f.ownerBalance.amount);
+      // owner estimate = gross − refunds − OTA fees − management fees; owner balance = owner estimate − expenses
+      const estimate = f.gross.amount - s.refund.amount - f.otaFee.amount - f.managementFee.amount;
+      expect(estimate).toBe(f.ownerEstimate.amount);
+      expect(estimate - f.operatingExpenses.amount).toBe(f.ownerBalance.amount);
     };
     fc.assert(
       fc.property(filterArb, (f) => {
@@ -147,6 +151,28 @@ describe("invariants under random filters", () => {
         expect(r.difference).toEqual(d.headline.difference);
         expect(r.byStatus).toEqual(d.byStatus);
         expect(r.rows.reduce((s, l) => s + l.difference.amount, 0n)).toBe(r.difference.amount);
+      }),
+      { numRuns: 40 },
+    );
+  });
+
+  it("every payment is in exactly one kind of money; held = the calculator's pending + the held payments the checks excluded", () => {
+    const payments = snapshot.records.filter((r) => r.entity === "payment");
+    expect(payments.every((r) => r.money !== null)).toBe(true);
+    expect(snapshot.records.filter((r) => r.entity !== "payment").every((r) => r.money === null)).toBe(true);
+    // received are exactly the payments the calculator gets with status received
+    const received = new Set(payments.filter((r) => r.money === "received").map((r) => r.recordKey));
+    expect(new Set(snapshot.input.payments.filter((p) => p.status === "received").map((p) => p.paymentId))).toEqual(received);
+    fc.assert(
+      fc.property(filterArb, (f) => {
+        const d = dashboardFor(f);
+        const excludedHeld = d.apart.held.filter((p) => p.reason !== "pending");
+        const inBase = (list: readonly { amount: Money | null }[]) =>
+          list.reduce((n, p) => n + (p.amount !== null && p.amount.currency === "IDR" ? p.amount.amount : 0n), 0n);
+        expect(d.apart.heldAmount.amount).toBe(d.headline.pending.amount + inBase(excludedHeld));
+        expect(d.apart.unallocatedAmount.amount).toBe(inBase(d.apart.unallocated));
+        const r = reconciliationOf(snapshot, d.filters);
+        expect(r.apart).toEqual(d.apart); // the page lists what the overview sums
       }),
       { numRuns: 40 },
     );

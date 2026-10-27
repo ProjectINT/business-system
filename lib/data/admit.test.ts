@@ -35,7 +35,7 @@ describe("admit on a run", () => {
       commission_rule: [COMMISSION_RULE],
       reservation: [
         RESERVATION,
-        { ...RESERVATION, reservation_id: "R0002", check_in: "2026-09-20", check_out: "2026-09-22", channel: "Direct" }, // DQ-16 review: unpaid by check-in
+        { ...RESERVATION, reservation_id: "R0002", check_in: "2026-09-20", check_out: "2026-09-22", channel: "Direct", ota_fee: "-1" }, // DQ-08 review: a negative OTA fee
         { ...RESERVATION, reservation_id: "R0003", property_id: "V999", check_in: "2026-09-25", check_out: "2026-09-27" }, // DQ-04 excluded
       ],
       payment: [PAYMENT],
@@ -52,6 +52,7 @@ describe("admit on a run", () => {
       checkOut: "2026-09-13",
       status: "confirmed",
       gross: { amount: 3000000n, currency: "IDR" },
+      pbjt: { amount: 0n, currency: "IDR" }, // no PBJT column in the CSV
       otaFee: { amount: 450000n, currency: "IDR" },
       refund: { amount: 0n, currency: "IDR" },
       channel: "OTA",
@@ -64,6 +65,7 @@ describe("admit on a run", () => {
         propertyId: "V001",
         paymentDate: "2026-09-10",
         amount: { amount: 2550000n, currency: "IDR" },
+        status: "received",
         dqStatus: "clean",
       },
     ]);
@@ -105,6 +107,30 @@ describe("admit on a run", () => {
       { entity: "reservation", recordId: "R0001", propertyId: "V001", code: "UNKNOWN_CURRENCY", message: "Unknown currency: EUR" },
       { entity: "payment", recordId: "P0001", propertyId: "V001", code: "UNKNOWN_CURRENCY", message: "Unknown currency: EUR" },
       { entity: "expense", recordId: "E0001", propertyId: "V001", code: "UNKNOWN_CURRENCY", message: "Unknown currency: EUR" },
+    ]);
+  });
+});
+
+describe("admit: payment status", () => {
+  const dataset = datasetFrom({
+    payment: [PAYMENT, { ...PAYMENT, payment_id: "P0002", status: "pending" }, { ...PAYMENT, payment_id: "P0003", status: "refunded" }],
+  });
+  const clean = (unitId: string): Verdict => ({ unitId, entity: "payment", recordKey: null, status: "clean", ruleIds: [], decisionId: null });
+  const s = admit(
+    dataset,
+    dataset.rows.payment.map((r) => clean(r.unitId)),
+  );
+
+  it("received and pending reach the calculator with their status", () => {
+    expect(s.input.payments.map((p) => [p.paymentId, p.status])).toEqual([
+      ["P0001", "received"],
+      ["P0002", "pending"],
+    ]);
+  });
+
+  it("another status is the adapter's failure, as an unknown currency is (DQ-25 excludes it first)", () => {
+    expect(s.failures).toEqual([
+      { entity: "payment", recordId: "P0003", propertyId: "V001", code: "UNKNOWN_STATUS", message: "Unknown payment status: refunded" },
     ]);
   });
 });

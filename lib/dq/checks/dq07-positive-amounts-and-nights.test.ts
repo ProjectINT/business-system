@@ -51,6 +51,6 @@ describe("DQ-07", () => {
       E0001: "amount not parsed (DQ-03)",
     });
     const report = await runOn(bad);
-    expect(resultFor(report, "DQ-07", "P0001").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-07", "P0001").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
   });
 });

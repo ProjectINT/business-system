@@ -2,6 +2,7 @@
 -- по приоритету (VALIDATION_PLAN.md, раздел 4):
 --   superseded — строку pending прежней пачки вытеснила новая версия того же ключа, правила её не проверяют;
 --   duplicate  — есть fail с действием duplicate;
+--   superseded — иначе есть fail с supersede: у брони есть версия с более поздним updated_at (DQ-02, v6);
 --   excluded   — иначе есть fail с exclude или решение exclude;
 --   pending    — иначе есть fail с decide без действующего решения или fail с hold;
 --   review     — иначе есть fail с review или решение finance_only;
@@ -19,10 +20,11 @@ create table app.dq_record_verdict (
   constraint dq_record_verdict_pkey primary key (run_id, raw_record_id),
   constraint dq_record_verdict_status_known
   check (status in ('clean', 'review', 'pending', 'excluded', 'duplicate', 'superseded')),
-  -- статус поставило правило (rule_ids) или человек (decision_id); у clean и superseded правил-причин нет
+  -- статус поставило правило (rule_ids) или человек (decision_id); у clean правил-причин нет; superseded ставит
+  -- раннер (вытесненная pending, без правил) или DQ-02 (прежняя версия брони), но не человек
   constraint dq_record_verdict_reasons check (
     case status
-      when 'superseded' then cardinality(rule_ids) = 0 and decision_id is null
+      when 'superseded' then rule_ids <@ array['DQ-02'] and decision_id is null
       when 'clean' then cardinality(rule_ids) = 0
       else cardinality(rule_ids) > 0 or decision_id is not null
     end

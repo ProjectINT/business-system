@@ -14,6 +14,7 @@ const pay = (id: string, reservationId: string, amount: bigint, day = "2026-09-2
   propertyId: "V011",
   paymentDate: date(day),
   amount: idr(amount),
+  status: "received",
   dqStatus: "clean",
 });
 
@@ -67,6 +68,26 @@ describe("reconcileReservation", () => {
     const late = pay("P2", "X0001", 1000n, "2026-12-01");
     expect(reconcileReservation(x, [other], ended, DEFAULT_POLICIES).status).toBe("not_received");
     expect(reconcileReservation(x, [late], before, DEFAULT_POLICIES).status).toBe("matched");
+  });
+
+  it("P101 of the final test → matched: 4 400 000 + 440 000 − 660 000 = 4 180 000; the pending P303 is not received", () => {
+    const rules = [
+      { ...RULES[0]!, propertyId: "V011", effectiveFrom: date("2026-11-01"), effectiveTo: date("2026-11-30") },
+      { ...RULES[0]!, propertyId: "V011", effectiveFrom: date("2026-12-01"), effectiveTo: null },
+    ];
+    const r101 = calculateReservation(
+      synthetic({ checkIn: date("2026-11-29"), checkOut: date("2026-12-03"), gross: idr(4400000n), pbjt: idr(440000n), otaFee: idr(660000n) }),
+      rules,
+      DEFAULT_POLICIES,
+    );
+    const p101 = pay("P101", "X0001", 4180000n, "2026-12-05");
+    const p303: PaymentInput = { ...pay("P303", "X0001", 50000n, "2026-12-06"), status: "pending" };
+    expect(reconcileReservation(r101, [p101, p303], date("2026-12-31"), DEFAULT_POLICIES)).toMatchObject({
+      expected: idr(4180000n),
+      received: idr(4180000n),
+      status: "matched",
+    });
+    expect(reconcileReservation(r101, [p303], date("2026-12-31"), DEFAULT_POLICIES).status).toBe("not_received");
   });
 
   it("cancelled reservation expects nothing", () => {

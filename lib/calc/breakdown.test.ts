@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest";
 import { calculateAccruals } from "./accrual";
 import { itemize } from "./breakdown";
 import { calculateBreakdown, calculateOverview } from "./overview";
-import { DEFAULT_POLICIES } from "./policies";
+import { DEFAULT_POLICIES, type CalcPolicies } from "./policies";
 import { fromEpochDay, period } from "./primitives/calendar";
 import { idr, sum, type Money } from "./primitives/money";
+import { parseRate, rateToString } from "./primitives/rate";
 import { calculateReservations } from "./reservation";
 import { overviewInput } from "./testing/arbitraries";
-import { EXP, PAY, RES, RULES, scope } from "./testing/fixtures";
-import type { Breakdown, Summary } from "./types";
+import { date, EXP, OCTOBER, PAY, RES, RULES, scope, synthetic } from "./testing/fixtures";
+import type { Breakdown, Scope, Summary } from "./types";
 
 const calcsOf = (...rs: (typeof RES)[keyof typeof RES][]) =>
   calculateReservations(rs, RULES, DEFAULT_POLICIES).results;
@@ -22,6 +23,20 @@ describe("itemize", () => {
     expect(stays[0]).toMatchObject({ reservationId: "R0018", stayNights: 6, nights: 3, gross: a.gross });
     expect(stays[0]?.managementFee).toEqual(a.managementFee);
     expect(stays[0]?.otaFee).toEqual(a.otaFee);
+  });
+
+  it("rates: the different rates of the stay's nights in the period; the 'checkout' line carries them all", () => {
+    const rules = [
+      { ...RULES[0]!, propertyId: "V011", effectiveFrom: date("2026-09-01"), effectiveTo: date("2026-09-30") },
+      { ...RULES[0]!, propertyId: "V011", effectiveFrom: date("2026-10-01"), effectiveTo: null, rate: parseRate("0.2") },
+    ];
+    const r = synthetic({ checkIn: date("2026-09-28"), checkOut: date("2026-10-02") });
+    const rates = (policies: CalcPolicies, p: Partial<Scope>) =>
+      itemize(calculateReservations([r], rules, policies).results, [], [], scope(p)).stays[0]!.rates.map(rateToString);
+    expect(rates(DEFAULT_POLICIES, {})).toEqual(["0.17"]);
+    expect(rates(DEFAULT_POLICIES, { period: OCTOBER })).toEqual(["0.2"]);
+    expect(rates(DEFAULT_POLICIES, { period: period(date("2026-09-01"), date("2026-10-31")) })).toEqual(["0.17", "0.2"]);
+    expect(rates({ ...DEFAULT_POLICIES, revenueRecognition: "checkout" }, { period: OCTOBER })).toEqual(["0.17", "0.2"]);
   });
 
   it("leaves out cancellations, stays outside the period and records under review when they are off", () => {
@@ -41,11 +56,12 @@ const total = (items: readonly { amount: Money }[]) => sum(items.map((i) => i.am
 
 function expectAddsUp(b: Breakdown, s: Summary) {
   expect(b.stays.reduce((n, x) => n + x.nights, 0)).toBe(s.accruals.nights);
-  for (const key of ["gross", "refund", "otaFee", "managementFee"] as const) {
+  for (const key of ["gross", "pbjt", "refund", "otaFee", "managementFee"] as const) {
     expect(sum(b.stays.map((x) => x[key]), "IDR")).toEqual(s.accruals[key]);
   }
   expect(total(b.expenses)).toEqual(s.accruals.operatingExpenses);
   expect(total(b.payments)).toEqual(s.cashFlow.received);
+  expect(total(b.pendingPayments)).toEqual(s.cashFlow.pending);
 }
 
 describe("calculateBreakdown", () => {
@@ -62,7 +78,7 @@ describe("calculateBreakdown", () => {
         expectAddsUp(b, o.portfolio);
         for (const p of o.properties) {
           const of = <T extends { propertyId: string }>(list: readonly T[]) => list.filter((x) => x.propertyId === p.propertyId);
-          expectAddsUp({ stays: of(b.stays), expenses: of(b.expenses), payments: of(b.payments) }, p);
+          expectAddsUp({ stays: of(b.stays), expenses: of(b.expenses), payments: of(b.payments), pendingPayments: of(b.pendingPayments) }, p);
         }
       }),
       { numRuns: 200 },

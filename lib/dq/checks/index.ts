@@ -23,8 +23,8 @@ import { dq18 } from "./dq18-partial-refund-on-cancel";
 import { dq19 } from "./dq19-payment-property-matches";
 import { dq20 } from "./dq20-dated-in-future";
 import { dq22 } from "./dq22-commission-rule-overlap";
-import { dq23 } from "./dq23-payment-after-check-in";
 import { dq24 } from "./dq24-confirmed-without-payment";
+import { dq25 } from "./dq25-payment-status";
 import { controlTotals } from "./dq90-control-totals";
 
 const ROW_CHECKS: readonly Check[] = [
@@ -47,15 +47,15 @@ const ROW_CHECKS: readonly Check[] = [
   dq18,
   // stage 3: reservations against each other
   dq12,
-  // stage 4: payments and expenses — the two rules that need no reservation first
+  // stage 4: payments and expenses — the rules that need no reservation first
   dq15,
   dq20,
+  dq25,
   dq05,
   dq14,
   dq16,
   dq24,
   dq19,
-  dq23,
 ];
 
 /** DQ-90 runs after every other rule: the totals are over final statuses. */
@@ -89,6 +89,6 @@ export {
   dq19,
   dq20,
   dq22,
-  dq23,
   dq24,
+  dq25,
 };

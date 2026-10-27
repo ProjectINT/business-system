@@ -23,6 +23,7 @@ import {
 } from "../calc";
 import { calcStatus } from "./admit";
 import { BASE_CURRENCY, scopeOf, selectedProperties, type Filters } from "./filters";
+import { apartOf, type Apart } from "./money";
 import type { DataFailure, RecordInfo, Snapshot } from "./types";
 
 /** The totals a page shows for one summary. */
@@ -32,15 +33,19 @@ export interface Headline {
   readonly gross: Money;
   readonly refund: Money;
   readonly otaFee: Money;
-  // otaFee by the booking's channel: otaFeeOta + otaFeeDirect = otaFee
+  // otaFee by the booking's channel: otaFeeOta + otaFeeDirect + otaFeeUnknown = otaFee
   readonly otaFeeOta: Money;
   readonly otaFeeDirect: Money;
+  readonly otaFeeUnknown: Money; // no channel (the event feed); shown only when not zero
+  readonly pbjt: Money; // PBJT payable, a liability
   readonly netRental: Money;
   readonly managementFee: Money;
+  readonly ownerEstimate: Money; // before expenses
   readonly operatingExpenses: Money;
   readonly ownerBalance: Money;
   // cash: by payment and expense date
   readonly received: Money;
+  readonly pending: Money; // admitted `pending` payments: not money yet, not in received
   readonly paidExpenses: Money;
   readonly netCashFlow: Money;
   // reconciliation: reservations with check-out in the period
@@ -57,11 +62,15 @@ export function headlineOf(s: Summary): Headline {
     otaFee: s.accruals.otaFee,
     otaFeeOta: s.accruals.otaFeeByChannel.OTA,
     otaFeeDirect: s.accruals.otaFeeByChannel.Direct,
+    otaFeeUnknown: s.accruals.otaFeeByChannel.unknown,
+    pbjt: s.accruals.pbjt,
     netRental: s.accruals.netRental,
     managementFee: s.accruals.managementFee,
+    ownerEstimate: s.ownerEstimate.amount,
     operatingExpenses: s.accruals.operatingExpenses,
     ownerBalance: s.ownerBalance.amount,
     received: s.cashFlow.received,
+    pending: s.cashFlow.pending,
     paidExpenses: s.cashFlow.paidExpenses,
     netCashFlow: s.cashFlow.netCashFlow,
     expected: s.reconciliation.expected,
@@ -84,8 +93,10 @@ export function headlineDiff<T extends { readonly [K in keyof T]: number | Money
 export interface PropertyFigures {
   readonly nights: number;
   readonly gross: Money;
+  readonly pbjt: Money;
   readonly otaFee: Money;
   readonly managementFee: Money;
+  readonly ownerEstimate: Money;
   readonly operatingExpenses: Money;
   readonly ownerBalance: Money;
   readonly received: Money;
@@ -99,7 +110,7 @@ export interface ExpenseItem extends ExpenseInput {
 
 /** The records a row's figures are made of; each list adds up to its figures. */
 export interface PropertySources {
-  /** Reservations with nights in the period: nights, gross, OTA and management fees. */
+  /** Reservations with nights in the period: nights, gross, PBJT, OTA and management fees. */
   readonly stays: readonly StayPart[];
   /** Expenses, paid and pending, by expense date. */
   readonly expenses: readonly ExpenseItem[];
@@ -154,6 +165,8 @@ export interface Dashboard {
   /** The portfolio in the shape of a property row, computed from the rows, not by adding up villas; clean records only. */
   readonly totals: Omit<PropertyRow, "propertyId" | "name" | "cluster" | "sources" | "underReviewSources">;
   readonly outside: { readonly groups: readonly OutsideGroup[]; readonly records: readonly RecordInfo[] };
+  /** Held and unallocated money, next to cash received and not in it (PLAN.md 7.4); the portfolio only. */
+  readonly apart: Apart;
   readonly failures: { readonly calc: readonly CalcFailure[]; readonly data: readonly DataFailure[] };
 }
 
@@ -168,13 +181,15 @@ function inSelection(propertyId: string | null, selected: ReadonlySet<string> | 
 /**
  * Excluded and duplicate rows of the scope. Property: any villa when all are selected (V999 too),
  * else the selected ones. Period: by the row's date — check-out, payment or expense date; a row
- * whose date did not parse cannot be placed and is always shown.
+ * whose date did not parse cannot be placed and is always shown. An excluded payment whose money is
+ * held or unallocated is not here: `apart` shows it next to cash received.
  */
 export function outsideOf(snapshot: Snapshot, filters: Filters): Dashboard["outside"] {
   const selected = selectedProperties(filters, snapshot);
   const records = snapshot.records.filter(
     (r) =>
       (r.status === "excluded" || r.status === "duplicate") &&
+      (r.money === null || r.money === "excluded" || r.money === "duplicate") &&
       r.entity !== "property" &&
       r.entity !== "commission_rule" &&
       inSelection(r.propertyId, selected) &&
@@ -263,8 +278,10 @@ export function dashboardOf(snapshot: Snapshot, filters: Filters): Dashboard {
   const figuresOf = (s: Summary): PropertyFigures => ({
     nights: s.accruals.nights,
     gross: s.accruals.gross,
+    pbjt: s.accruals.pbjt,
     otaFee: s.accruals.otaFee,
     managementFee: s.accruals.managementFee,
+    ownerEstimate: s.ownerEstimate.amount,
     operatingExpenses: s.accruals.operatingExpenses,
     ownerBalance: s.ownerBalance.amount,
     received: s.cashFlow.received,
@@ -306,6 +323,7 @@ export function dashboardOf(snapshot: Snapshot, filters: Filters): Dashboard {
       properties.reduce((n, p) => n + p.flags, 0),
     ),
     outside: outsideOf(snapshot, filters),
+    apart: apartOf(snapshot, filters),
     failures: {
       calc: overview.failures,
       data: snapshot.failures.filter((f) => inSelection(f.propertyId, selected)),

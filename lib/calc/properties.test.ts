@@ -5,10 +5,10 @@ import { calculateAccruals } from "./accrual";
 import { calculateCashFlow } from "./cash";
 import { calculateOverview } from "./overview";
 import { DEFAULT_POLICIES } from "./policies";
-import { fromEpochDay, period } from "./primitives/calendar";
-import { add, sum, type Money } from "./primitives/money";
-import { calculateReservations } from "./reservation";
-import { overviewInput, splitPeriod } from "./testing/arbitraries";
+import { addDays, fromEpochDay, nightsBetween, period, type CalendarDate } from "./primitives/calendar";
+import { add, idr, sum, type Money } from "./primitives/money";
+import { calculateReservation, calculateReservations } from "./reservation";
+import { overviewInput, rate, reservation, splitPeriod } from "./testing/arbitraries";
 import { deepFreeze, scope } from "./testing/fixtures";
 import type { Accruals, CashFlow, OverviewInput, Scope } from "./types";
 
@@ -23,9 +23,12 @@ function addAccruals(a: Accruals, b: Accruals): Accruals {
     otaFeeByChannel: {
       OTA: add(a.otaFeeByChannel.OTA, b.otaFeeByChannel.OTA),
       Direct: add(a.otaFeeByChannel.Direct, b.otaFeeByChannel.Direct),
+      unknown: add(a.otaFeeByChannel.unknown, b.otaFeeByChannel.unknown),
     },
+    pbjt: add(a.pbjt, b.pbjt),
     netRental: add(a.netRental, b.netRental),
     managementFee: add(a.managementFee, b.managementFee),
+    ownerEstimate: add(a.ownerEstimate, b.ownerEstimate),
     operatingExpenses: add(a.operatingExpenses, b.operatingExpenses),
     cancellations: {
       count: a.cancellations.count + b.cancellations.count,
@@ -38,6 +41,7 @@ function addAccruals(a: Accruals, b: Accruals): Accruals {
 
 const addCash = (a: CashFlow, b: CashFlow): CashFlow => ({
   received: add(a.received, b.received),
+  pending: add(a.pending, b.pending),
   paidExpenses: add(a.paidExpenses, b.paidExpenses),
   netCashFlow: add(a.netCashFlow, b.netCashFlow),
 });
@@ -68,8 +72,8 @@ describe("aggregate invariants", () => {
         const right = compute(input, s(p.mid + 1, p.to));
         expect(addAccruals(left.accruals, right.accruals)).toEqual(whole.accruals);
         expect(addCash(left.cash, right.cash)).toEqual(whole.cash);
-        const { OTA, Direct } = whole.accruals.otaFeeByChannel;
-        expect(add(OTA, Direct)).toEqual(whole.accruals.otaFee);
+        const { OTA, Direct, unknown } = whole.accruals.otaFeeByChannel;
+        expect(add(add(OTA, Direct), unknown)).toEqual(whole.accruals.otaFee);
       }),
       runs,
     );
@@ -127,6 +131,37 @@ describe("aggregate invariants", () => {
         );
         expect(failures.every((f) => f.code === "NO_COMMISSION_RULE")).toBe(true);
       }),
+      runs,
+    );
+  });
+
+  it("a rate per night: split at the rate change, the stay's fee = the parts' fees at their rates; PBJT does not touch it", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 9999 }).chain(reservation),
+        rate,
+        rate,
+        fc.integer({ min: 1, max: 59 }),
+        (r, a, b, cut) => {
+          fc.pre(r.status !== "cancelled" && cut < nightsBetween(r.checkIn, r.checkOut));
+          const change = addDays(r.checkIn, cut);
+          const rule = { propertyId: r.propertyId, feeBasis: "gross_booking_value" as const };
+          const rules = [
+            { ...rule, effectiveFrom: r.checkIn, effectiveTo: addDays(change, -1), rate: a },
+            { ...rule, effectiveFrom: change, effectiveTo: null, rate: b },
+          ];
+          const whole = calculateReservation(r, rules, DEFAULT_POLICIES);
+          const nights = whole.lines.map((l) => l.gross);
+          const part = (from: CalendarDate, to: CalendarDate, gross: Money) =>
+            calculateReservation({ ...r, checkIn: from, checkOut: to, gross }, rules, DEFAULT_POLICIES).managementFee;
+          const before = part(r.checkIn, change, sum(nights.slice(0, cut), "IDR"));
+          const after = part(change, r.checkOut, sum(nights.slice(cut), "IDR"));
+          expect(whole.managementFee).toEqual(add(before, after));
+          const noPbjt = calculateReservation({ ...r, pbjt: idr(0n) }, rules, DEFAULT_POLICIES);
+          expect(noPbjt.managementFee).toEqual(whole.managementFee);
+          expect(noPbjt.ownerShare).toEqual(whole.ownerShare);
+        },
+      ),
       runs,
     );
   });

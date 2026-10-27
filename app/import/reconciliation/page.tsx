@@ -23,7 +23,7 @@ export default function ReconciliationPage({ searchParams }: PageProps<"/import/
   return (
     <>
       <p className="text-sm text-muted">
-        Expected payout (gross − OTA fee − refund) against payments received, per reservation · amounts in IDR
+        Expected payout (gross + PBJT − OTA fee − refund) against payments received, per reservation · amounts in IDR
       </p>
       <Suspense fallback={<PageSkeleton />}>
         <Reconciliation searchParams={searchParams} />
@@ -55,10 +55,12 @@ async function Reconciliation({ searchParams }: Pick<PageProps<"/import/reconcil
           difference: r.difference,
           byStatus: r.byStatus,
           underReview: r.underReview,
-          unallocatedAmount: r.unallocatedAmount,
+          held: r.apart.heldAmount,
+          unallocated: r.apart.unallocatedAmount,
         })}
         rows={toView(r.rows)}
-        unallocated={r.unallocated.map((u) => ({ ...u, ruleIds: [...u.ruleIds], amount: amountText(u.amount) }))}
+        held={r.apart.held.map((u) => ({ ...u, ruleIds: [...u.ruleIds], amount: amountText(u.amount) }))}
+        unallocated={r.apart.unallocated.map((u) => ({ ...u, ruleIds: [...u.ruleIds], amount: amountText(u.amount) }))}
         includeReview={filters.includeReview}
         rules={[...snapshot.rules]}
       />

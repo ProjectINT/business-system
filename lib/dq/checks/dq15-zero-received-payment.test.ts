@@ -28,7 +28,7 @@ describe("DQ-15", () => {
 
   it("skips a row already out, and alone unparsed values", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-15", "P0004").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-15", "P0004").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     const bad = datasetFrom({ payment: [{ ...PAYMENT, amount: "" }, { ...PAYMENT, payment_id: "P0002", status: "" }] });
     expect(await skipsAlone(dq15, bad)).toEqual({ P0001: "amount not parsed (DQ-03)", P0002: "status not parsed (DQ-03)" });
   });

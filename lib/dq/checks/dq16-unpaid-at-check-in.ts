@@ -1,18 +1,23 @@
-// DQ-16 unpaidAtCheckIn: a villa is paid in full before check-in (decided 2026-10-18), so an active
-// reservation that has checked in by today with payments dated on or before check-in below
-// GBV − OTA − refund carries a debt as of check-in. A payment on the check-in day is on time; a
-// payment after it is DQ-23's. Payments count whatever their own flags, unless excluded or duplicate.
-import type { Check, CheckContext, CheckResult } from "../types";
+// DQ-16 unpaidAtCheckIn (v2): a villa is paid in full by the check-in day, OTA bookings too (decided
+// 2026-10-18, confirmed for OTA 2026-10-27), so an active reservation that has checked in by today
+// with received payments dated on or before check-in below A + PBJT − OTA − refund carried a debt at
+// check-in. One flag per reservation, of one of two kinds: `paid_late` — the rest came later, the day
+// it was paid in full and how late; `unpaid` — still not paid in full, the debt as of today. Information,
+// not review: there is nothing for a person to resolve, and the money itself is already in the figures
+// (received counts only what arrived). v1 had a second rule for each late payment (DQ-23), merged here.
+// Payments count whatever their own flags, unless excluded, duplicate or pending.
+import { nightsBetween, type CalendarDate } from "../../calc";
+import type { Check, CheckContext, CheckResult, RowUnit } from "../types";
 import { expectedPayout, fail, isActive, isOutUnit, pass, paymentsByReservation, skip, SKIP } from "./common";
 
 export const dq16: Check = {
   id: "DQ-16",
-  version: 1,
+  version: 2,
   title: "Unpaid at check-in",
   entity: "reservation",
-  action: "review",
+  action: "info",
   engine: "ts",
-  dependsOn: ["DQ-05"],
+  dependsOn: ["DQ-05", "DQ-25"],
   async run(ctx: CheckContext): Promise<CheckResult[]> {
     const payments = paymentsByReservation(ctx);
     return ctx.units("reservation").map((u) => {
@@ -25,19 +30,29 @@ export const dq16: Check = {
       const expected = expectedPayout(u);
       if (expected === null) return skip(u, SKIP.notParsed("amounts"));
       if (expected <= 0n) return pass(u);
+      const date = (p: RowUnit<"payment">) => p.values.payment_date!; // parsed: paymentsByReservation keeps only those
+      const mine = [...(u.recordKey === null ? [] : (payments.get(u.recordKey) ?? []))].sort((a, b) =>
+        date(a) < date(b) ? -1 : date(a) > date(b) ? 1 : 0,
+      );
       let byCheckIn = 0n;
       let later = 0n;
-      const mine = u.recordKey === null ? [] : (payments.get(u.recordKey) ?? []);
+      let paidOn: CalendarDate | null = null; // the day the total reached what was due
       for (const p of mine) {
-        if (p.values.payment_date! <= check_in) byCheckIn += p.values.amount!;
+        if (date(p) <= check_in) byCheckIn += p.values.amount!;
         else later += p.values.amount!;
+        if (paidOn === null && byCheckIn + later >= expected) paidOn = date(p);
       }
       if (byCheckIn >= expected) return pass(u);
       const shortfall = expected - byCheckIn;
+      const base = { checkIn: check_in, expected, paidByCheckIn: byCheckIn, paidLater: later, shortfall, payments: mine.length };
+      const relatedKeys = mine.map((p) => p.recordKey!).sort();
+      const outstanding = expected - byCheckIn - later;
+      const kind = paidOn === null ? { kind: "unpaid", outstanding } : { kind: "paid_late", paidOn, daysLate: nightsBetween(check_in, paidOn) };
       return fail(u, {
-        details: { checkIn: check_in, expected, paidByCheckIn: byCheckIn, paidLater: later, shortfall, payments: mine.length },
-        relatedKeys: mine.map((p) => p.recordKey!).sort(),
-        amountIdr: currency === "IDR" ? shortfall : undefined,
+        details: { ...kind, ...base },
+        relatedKeys,
+        // paid late: what was missing at check-in; unpaid: what is owed today
+        amountIdr: currency === "IDR" ? (paidOn === null ? outstanding : shortfall) : undefined,
       });
     });
   },

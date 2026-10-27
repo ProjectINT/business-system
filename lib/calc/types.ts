@@ -11,6 +11,8 @@ export type ReservationStatus = "confirmed" | "modified" | "cancelled";
 export type FeeBasis = "gross_booking_value";
 export type ExpenseStatus = "paid" | "pending";
 export type Channel = "OTA" | "Direct";
+/** pending — not money yet (ТЗ п. 11 of the final test); other statuses DQ-25 excludes. */
+export type PaymentStatus = "received" | "pending";
 
 export interface ReservationInput {
   readonly reservationId: string;
@@ -18,10 +20,11 @@ export interface ReservationInput {
   readonly checkIn: CalendarDate;
   readonly checkOut: CalendarDate;
   readonly status: ReservationStatus;
-  readonly gross: Money; // gross_booking_value
+  readonly gross: Money; // accommodation without PBJT: gross_booking_value (CSV), accommodation_gross_idr (feed)
+  readonly pbjt: Money; // a liability, not revenue; the CSV has no column — 0 (PLAN.md 7.2)
   readonly otaFee: Money; // sign is not restricted: R0102 = −100 000 (DQ-08, review)
   readonly refund: Money;
-  readonly channel: Channel;
+  readonly channel: Channel | null; // null — unknown: the event feed has no channel, it is not guessed
   readonly dqStatus: DqStatus;
 }
 
@@ -39,6 +42,7 @@ export interface PaymentInput {
   readonly propertyId: string;
   readonly paymentDate: CalendarDate;
   readonly amount: Money;
+  readonly status: PaymentStatus;
   readonly dqStatus: DqStatus;
 }
 
@@ -54,10 +58,12 @@ export interface ExpenseInput {
 export interface NightLine {
   readonly date: CalendarDate; // the night from date to date + 1; check-out date under 'checkout'
   readonly nights: number; // 1 per night; the whole stay on the single 'checkout' line
+  readonly rate: Rate | null; // the night's rate; null on the 'checkout' line, which may carry several
   readonly gross: Money;
+  readonly pbjt: Money;
   readonly refund: Money;
   readonly otaFee: Money;
-  readonly managementFee: Money;
+  readonly managementFee: Money; // rounded per night; on the 'checkout' line — the sum of the nights
 }
 
 export interface ReservationCalc {
@@ -65,16 +71,17 @@ export interface ReservationCalc {
   readonly propertyId: string;
   readonly checkIn: CalendarDate;
   readonly checkOut: CalendarDate;
-  readonly channel: Channel;
+  readonly channel: Channel | null;
   readonly dqStatus: DqStatus;
   readonly nights: number;
   readonly active: boolean; // confirmed | modified
-  readonly rate: Rate | null; // null for a cancellation
+  readonly rates: readonly Rate[]; // the different rates of the nights in night order; empty for a cancellation
   // Recognised amounts; all zero for a cancellation.
   readonly gross: Money;
+  readonly pbjt: Money;
   readonly refund: Money;
   readonly otaFee: Money;
-  readonly managementFee: Money;
+  readonly managementFee: Money; // Σ of the night lines
   readonly netRental: Money;
   readonly expectedPayout: Money;
   readonly ownerShare: Money;
@@ -96,10 +103,12 @@ export interface Accruals {
   readonly gross: Money;
   readonly refund: Money;
   readonly otaFee: Money;
-  /** otaFee split by the booking's channel; on Direct it is the marketing fee (DQ-11, info). */
-  readonly otaFeeByChannel: Readonly<Record<Channel, Money>>;
+  /** otaFee split by the booking's channel; on Direct it is the marketing fee (DQ-11, info); `unknown` — no channel. */
+  readonly otaFeeByChannel: Readonly<Record<Channel | "unknown", Money>>;
+  readonly pbjt: Money; // PBJT payable: a liability, not in revenue, the fee or the owner estimate
   readonly netRental: Money;
   readonly managementFee: Money;
+  readonly ownerEstimate: Money; // netRental − managementFee, before expenses (ТЗ п. 8)
   readonly operatingExpenses: Money; // paid + pending, by expense_date
   /** Cancellations with check-in in the period, for reference. */
   readonly cancellations: {
@@ -111,9 +120,10 @@ export interface Accruals {
 }
 
 export interface CashFlow {
-  readonly received: Money;
+  readonly received: Money; // payments `received`, by payment_date
+  readonly pending: Money; // payments `pending`: not money yet (ТЗ п. 11), the admitted part of "held"
   readonly paidExpenses: Money;
-  readonly netCashFlow: Money;
+  readonly netCashFlow: Money; // received − paid expenses
 }
 
 export type ReconciliationStatus = "matched" | "not_received" | "underpaid" | "overpaid" | "not_due";
@@ -142,12 +152,13 @@ export interface StayPart {
   readonly propertyId: string;
   readonly checkIn: CalendarDate;
   readonly checkOut: CalendarDate;
-  readonly channel: Channel;
+  readonly channel: Channel | null;
   readonly dqStatus: DqStatus;
-  readonly rate: Rate;
+  readonly rates: readonly Rate[]; // the different rates of its nights in the period
   readonly stayNights: number; // the whole stay
   readonly nights: number; // of them in the period
   readonly gross: Money;
+  readonly pbjt: Money;
   readonly refund: Money;
   readonly otaFee: Money;
   readonly managementFee: Money;
@@ -158,9 +169,10 @@ export interface StayPart {
  * totals. Reconciliation lists its records itself: Reconciliation.lines.
  */
 export interface Breakdown {
-  readonly stays: readonly StayPart[]; // nights, gross, refund, otaFee, managementFee
+  readonly stays: readonly StayPart[]; // nights, gross, pbjt, refund, otaFee, managementFee
   readonly expenses: readonly ExpenseInput[]; // operatingExpenses: paid + pending, by expense_date
-  readonly payments: readonly PaymentInput[]; // cashFlow.received, by payment_date
+  readonly payments: readonly PaymentInput[]; // cashFlow.received: `received`, by payment_date
+  readonly pendingPayments: readonly PaymentInput[]; // cashFlow.pending, by payment_date
 }
 
 export interface OwnerBalanceEstimate {
@@ -197,7 +209,8 @@ export interface Summary {
   readonly accruals: Accruals;
   readonly cashFlow: CashFlow;
   readonly reconciliation: Reconciliation;
-  readonly ownerBalance: OwnerBalanceEstimate;
+  readonly ownerEstimate: OwnerBalanceEstimate; // before expenses
+  readonly ownerBalance: OwnerBalanceEstimate; // after them
 }
 
 export interface PropertySummary extends Summary {

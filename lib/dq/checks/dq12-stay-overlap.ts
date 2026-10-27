@@ -135,7 +135,7 @@ export const dq12: Check = {
   entity: "reservation",
   action: "decide",
   engine: "sql",
-  dependsOn: ["DQ-04", "DQ-06", "DQ-07", "DQ-09"],
+  dependsOn: ["DQ-04", "DQ-06", "DQ-07", "DQ-09", "DQ-17"],
   async run(): Promise<CheckResult[]> {
     throw new Error("DQ-12 on SQL arrives in phase 7b; without a database the runner uses runTs");
   },

@@ -13,13 +13,25 @@ import { FigureWithSources } from "./figure-sources";
 import { matchesVilla, VillaSearch } from "./villa-search";
 
 type Row = View<PropertyRow>;
-type NumericKey = "nights" | "gross" | "otaFee" | "managementFee" | "operatingExpenses" | "ownerBalance" | "received" | "difference";
+type NumericKey =
+  | "nights"
+  | "gross"
+  | "pbjt"
+  | "otaFee"
+  | "managementFee"
+  | "ownerEstimate"
+  | "operatingExpenses"
+  | "ownerBalance"
+  | "received"
+  | "difference";
 
 const COLUMNS: { id: NumericKey; label: string; hint: string }[] = [
   { id: "nights", label: "Nights", hint: "Nights of stay in the period; overlapping stays under review count twice" },
-  { id: "gross", label: "Gross bookings", hint: "By nights of stay in the period" },
+  { id: "gross", label: "Gross bookings", hint: "Accommodation without PBJT, by nights of stay in the period" },
+  { id: "pbjt", label: "PBJT", hint: "Tax payable, by nights of stay: owed to the state, not revenue" },
   { id: "otaFee", label: "OTA fees", hint: "By nights of stay" },
-  { id: "managementFee", label: "Mgmt fees", hint: "Rate on check-in date × gross, by nights" },
+  { id: "managementFee", label: "Mgmt fees", hint: "Each night's gross × the rate in force that night, rounded per night" },
+  { id: "ownerEstimate", label: "Owner estimate*", hint: "Net rental − management fees, before expenses; an estimate" },
   { id: "operatingExpenses", label: "Expenses", hint: "Paid + pending, by expense date" },
   { id: "ownerBalance", label: "Owner balance*", hint: "Net rental − management fees − expenses; an estimate" },
   { id: "received", label: "Cash received", hint: "By payment date" },

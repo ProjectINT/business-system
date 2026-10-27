@@ -2,8 +2,8 @@
 
 import { Card, Chip, SearchField, Table, Tabs, Tooltip } from "@heroui/react";
 import { useMemo, useState } from "react";
-import type { ReconciliationStatus, View } from "@/lib/calc";
-import type { ReconciliationRow, ReconciliationView as Model, RuleInfo } from "@/lib/data";
+import type { Money, ReconciliationStatus, View } from "@/lib/calc";
+import type { ApartReason, ReconciliationRow, ReconciliationView as Model, RuleInfo } from "@/lib/data";
 import { count, idrFull, idrSignedCompact } from "@/lib/format";
 import { RuleBadges } from "@/components/rules/rule-badge";
 import { RuleLegendButton } from "@/components/rules/rule-legend";
@@ -11,17 +11,25 @@ import { ruleSearchText } from "@/components/rules/rule-meta";
 import { RECONCILIATION_META, RECONCILIATION_ORDER, STATUS_META } from "@/components/status-meta";
 
 type Row = View<ReconciliationRow>;
-type Summary = View<Pick<Model, "expected" | "received" | "difference" | "byStatus" | "underReview" | "unallocatedAmount">>;
+type Summary = View<Pick<Model, "expected" | "received" | "difference" | "byStatus" | "underReview"> & { held: Money; unallocated: Money }>;
 
-/** An unallocated payment with its amount already written out: it may be in another currency. */
-export interface UnallocatedRow {
+/** A held or unallocated payment with its amount already written out: it may be in another currency. */
+export interface ApartRow {
   paymentId: string | null;
   reservationId: string | null;
   propertyId: string | null;
   paymentDate: string | null;
   amount: string | null;
+  reason: ApartReason;
   ruleIds: string[];
 }
+
+const REASON: Record<ApartReason, string> = {
+  pending: "Pending: not money yet",
+  unknown_status: "Status is neither received nor pending",
+  reservation_excluded: "Its reservation is excluded by the checks",
+  missing: "Its reservation is not in the data",
+};
 
 const ALL = "all";
 
@@ -57,16 +65,77 @@ function RuleChips({ ids, ruleOf }: { ids: string[]; ruleOf: Map<string, RuleInf
   return <RuleBadges rules={ids.map((id) => ({ id, action: ruleOf.get(id)?.action }))} />;
 }
 
+/** Held or unallocated payments: money we know of that is not in cash received. */
+function ApartPayments({
+  title,
+  description,
+  total,
+  rows,
+  ruleOf,
+}: {
+  title: string;
+  description: string;
+  total: number;
+  rows: ApartRow[];
+  ruleOf: Map<string, RuleInfo>;
+}) {
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-baseline gap-3">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <span className="text-sm text-muted">
+          {description} · IDR {idrFull(total)}
+        </span>
+      </div>
+      <Table variant="secondary">
+        <Table.ScrollContainer>
+          <Table.Content aria-label={title} className="min-w-[800px]">
+            <Table.Header>
+              <Table.Column isRowHeader>Payment</Table.Column>
+              <Table.Column>Reservation</Table.Column>
+              <Table.Column>Villa</Table.Column>
+              <Table.Column>Date</Table.Column>
+              <Table.Column className="text-end">Amount</Table.Column>
+              <Table.Column>Why</Table.Column>
+            </Table.Header>
+            <Table.Body
+              renderEmptyState={() => <div className="py-6 text-center text-sm text-muted">None in this selection</div>}
+            >
+              {rows.map((u, i) => (
+                <Table.Row key={u.paymentId ?? i} id={u.paymentId ?? i}>
+                  <Table.Cell className="font-medium">{u.paymentId ?? "—"}</Table.Cell>
+                  <Table.Cell>{u.reservationId ?? "—"}</Table.Cell>
+                  <Table.Cell>{u.propertyId ?? "—"}</Table.Cell>
+                  <Table.Cell className="tabular-nums">{u.paymentDate ?? "—"}</Table.Cell>
+                  <Table.Cell className="text-end tabular-nums">{u.amount ?? "—"}</Table.Cell>
+                  <Table.Cell>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm">{REASON[u.reason]}</span>
+                      <RuleChips ids={u.ruleIds} ruleOf={ruleOf} />
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table.Content>
+        </Table.ScrollContainer>
+      </Table>
+    </section>
+  );
+}
+
 export function ReconciliationView({
   summary,
   rows,
+  held,
   unallocated,
   includeReview,
   rules,
 }: {
   summary: Summary;
   rows: Row[];
-  unallocated: UnallocatedRow[];
+  held: ApartRow[];
+  unallocated: ApartRow[];
   includeReview: boolean;
   rules: RuleInfo[];
 }) {
@@ -214,46 +283,20 @@ export function ReconciliationView({
         </Table>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h2 className="text-lg font-semibold">Unallocated payments</h2>
-          <span className="text-sm text-muted">
-            Excluded by the checks, so they reach no reservation · IDR {idrFull(summary.unallocatedAmount)}
-          </span>
-        </div>
-        <Table variant="secondary">
-          <Table.ScrollContainer>
-            <Table.Content aria-label="Unallocated payments" className="min-w-[800px]">
-              <Table.Header>
-                <Table.Column isRowHeader>Payment</Table.Column>
-                <Table.Column>Reservation</Table.Column>
-                <Table.Column>Villa</Table.Column>
-                <Table.Column>Date</Table.Column>
-                <Table.Column className="text-end">Amount</Table.Column>
-                <Table.Column>Why</Table.Column>
-              </Table.Header>
-              <Table.Body
-                renderEmptyState={() => (
-                  <div className="py-6 text-center text-sm text-muted">No unallocated payments in this selection</div>
-                )}
-              >
-                {unallocated.map((u, i) => (
-                  <Table.Row key={u.paymentId ?? i} id={u.paymentId ?? i}>
-                    <Table.Cell className="font-medium">{u.paymentId ?? "—"}</Table.Cell>
-                    <Table.Cell>{u.reservationId ?? "—"}</Table.Cell>
-                    <Table.Cell>{u.propertyId ?? "—"}</Table.Cell>
-                    <Table.Cell className="tabular-nums">{u.paymentDate ?? "—"}</Table.Cell>
-                    <Table.Cell className="text-end tabular-nums">{u.amount ?? "—"}</Table.Cell>
-                    <Table.Cell>
-                      <RuleChips ids={u.ruleIds} ruleOf={ruleOf} />
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
-        </Table>
-      </section>
+      <ApartPayments
+        title="Held"
+        description="Known money that is not the villas' yet: pending payments, and payments for reservations out of the figures. Not in received"
+        total={summary.held}
+        rows={held}
+        ruleOf={ruleOf}
+      />
+      <ApartPayments
+        title="Unallocated"
+        description="Payments for a reservation that is not in the data. Not in received, never the villas' revenue"
+        total={summary.unallocated}
+        rows={unallocated}
+        ruleOf={ruleOf}
+      />
     </div>
   );
 }

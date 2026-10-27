@@ -6,7 +6,7 @@
 import { Alert, Card, Chip, Label, ListBox, SearchField, Select, Table, Tabs, Tooltip, type Key } from "@heroui/react";
 import { CircleCheck, CircleXmark } from "@gravity-ui/icons";
 import { useMemo, useState } from "react";
-import type { RuleInfo } from "@/lib/data";
+import type { MoneyKind, RuleInfo } from "@/lib/data";
 import type { RowEntity, Status } from "@/lib/dq";
 import { count, idrFull } from "@/lib/format";
 import { RuleBadge, RuleBadges, RuleMark } from "@/components/rules/rule-badge";
@@ -242,8 +242,47 @@ function ControlTotals({ files }: { files: FileView[] }) {
             USD and stays apart: its amount is never added to IDR.
           </Table.Footer>
         </Table>
+        {ordered
+          .filter((f) => f.rowsByMoney !== null)
+          .map((f) => (
+            <PaymentsByMoney key={f.fileName} file={f} />
+          ))}
       </Card.Content>
     </Card>
+  );
+}
+
+const MONEY_KINDS: readonly MoneyKind[] = ["received", "held", "unallocated", "excluded", "duplicate"];
+
+const MONEY_LABEL: Record<MoneyKind, string> = {
+  received: "received",
+  held: "held",
+  unallocated: "unallocated",
+  excluded: "excluded",
+  duplicate: "duplicates",
+};
+
+/** Each payment in exactly one kind of money (PLAN.md 7.4): the kinds add up to the file. */
+function PaymentsByMoney({ file }: { file: FileView }) {
+  const rows = file.rowsByMoney!;
+  return (
+    <div className="mt-3 flex flex-col gap-1 text-sm">
+      <span className="font-medium">{file.fileName} by money</span>
+      <span className="text-muted tabular-nums">
+        {count(file.rowCount)} rows = {MONEY_KINDS.map((k) => `${count(rows[k])} ${MONEY_LABEL[k]}`).join(" + ")}
+      </span>
+      {file.amounts
+        .filter((a) => a.byMoney !== null)
+        .map((a) => (
+          <span key={a.currency} className="text-muted tabular-nums">
+            {a.currency} {a.source} = {MONEY_KINDS.map((k) => `${a.byMoney![k]} ${MONEY_LABEL[k]}`).join(" + ")}
+          </span>
+        ))}
+      <span className="text-xs text-muted">
+        Held: pending, an unknown status, or a reservation the checks excluded; unallocated: no such reservation. Neither is in
+        cash received.
+      </span>
+    </div>
   );
 }
 

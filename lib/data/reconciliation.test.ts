@@ -9,16 +9,20 @@ const snapshot = await snapshotOf({
   commission_rule: [COMMISSION_RULE, { ...COMMISSION_RULE, property_id: "V002" }],
   reservation: [
     RESERVATION, // expected 2 550 000, paid on check-in → matched
-    { ...RESERVATION, reservation_id: "R0002", check_in: "2026-09-20", check_out: "2026-09-23" },
+    { ...RESERVATION, reservation_id: "R0002", check_in: "2026-09-20", check_out: "2026-09-23", status: "modified" }, // DQ-13: waits for a decision
     { ...RESERVATION, reservation_id: "R0003", property_id: "V002", check_in: "2026-10-20", check_out: "2026-10-22" }, // check-in still ahead
+    { ...RESERVATION, reservation_id: "R0004", property_id: "V777", check_in: "2026-10-01", check_out: "2026-10-03" }, // DQ-04 excluded
   ],
   payment: [
     PAYMENT,
-    { ...PAYMENT, payment_id: "P0002", reservation_id: "R0002", payment_date: "2026-09-25", amount: "1000000" }, // DQ-23 review
+    { ...PAYMENT, payment_id: "P0002", reservation_id: "R0002", payment_date: "2026-09-25", amount: "1000000" }, // waits with its reservation (DQ-05 hold)
     { ...PAYMENT, payment_id: "P0003", reservation_id: "R0009", payment_date: "2026-09-11", amount: "700" }, // no reservation
     { ...PAYMENT, payment_id: "P0004", reservation_id: "R0009", property_id: "V002", payment_date: "someday" }, // no date
     { ...PAYMENT, payment_id: "P0005", reservation_id: "R0009", property_id: "", payment_date: "2026-09-12" }, // no villa
     { ...PAYMENT, payment_id: "P0006", reservation_id: "R0001", currency: "USD", amount: "10" }, // not in IDR
+    { ...PAYMENT, payment_id: "P0007", reservation_id: "R0001", property_id: "V002", payment_date: "2026-09-11", amount: "300", status: "pending" }, // held: not money yet; under review (DQ-19)
+    { ...PAYMENT, payment_id: "P0008", reservation_id: "R0001", payment_date: "2026-09-12", amount: "400", status: "refunded" }, // held: unknown status
+    { ...PAYMENT, payment_id: "P0009", reservation_id: "R0004", payment_date: "2026-10-02", amount: "500" }, // held: its reservation is excluded
   ],
 });
 
@@ -27,7 +31,7 @@ describe("reconciliationOf", () => {
     const r = reconciliationOf(snapshot, filtersOf(snapshot));
     expect(r.rows.map((l) => [l.reservationId, l.checkIn, l.status, l.received.amount, l.dqStatus, l.ruleIds, l.paymentIds])).toEqual([
       ["R0001", "2026-09-10", "matched", 2550000n, "clean", [], ["P0001"]],
-      ["R0002", "2026-09-20", "underpaid", 1000000n, "review", ["DQ-16"], ["P0002"]],
+      ["R0002", "2026-09-20", "underpaid", 1000000n, "pending", ["DQ-13", "DQ-16"], ["P0002"]], // DQ-16: the debt at check-in, a note
       ["R0003", "2026-10-20", "not_due", 0n, "clean", ["DQ-24"], []], // confirmed with no payment: a note, not a debt yet
     ]);
     expect(r.rows[0]).toMatchObject({ propertyId: "V001", checkOut: "2026-09-13", reservationStatus: "confirmed", expected: idr(2550000n) });
@@ -51,26 +55,34 @@ describe("reconciliationOf", () => {
     expect(r.expected).toEqual(idr(2550000n * 2n));
   });
 
-  it("unallocated payments: excluded ones of the selected villas and period; no date — always; other currency not summed", () => {
+  it("held and unallocated payments of the selected villas and period, each with its reason; the rest excluded stays out of both", () => {
     const all = reconciliationOf(snapshot, filtersOf(snapshot));
-    expect(all.unallocated.map((u) => [u.paymentId, u.reservationId, u.propertyId, u.paymentDate, u.amount, u.ruleIds])).toEqual([
-      ["P0003", "R0009", "V001", "2026-09-11", idr(700n), ["DQ-05"]],
-      ["P0004", "R0009", "V002", null, idr(2550000n), ["DQ-03"]],
-      ["P0005", "R0009", null, "2026-09-12", idr(2550000n), ["DQ-03"]],
-      ["P0006", "R0001", "V001", "2026-09-10", { amount: 1000n, currency: "USD" }, ["DQ-06"]],
+    expect(all.apart.unallocated.map((u) => [u.paymentId, u.reservationId, u.propertyId, u.paymentDate, u.amount, u.reason, u.ruleIds])).toEqual([
+      ["P0003", "R0009", "V001", "2026-09-11", idr(700n), "missing", ["DQ-05"]],
     ]);
-    expect(all.unallocatedAmount).toEqual(idr(700n + 2550000n + 2550000n));
+    expect(all.apart.held.map((u) => [u.paymentId, u.reservationId, u.amount, u.reason, u.ruleIds])).toEqual([
+      ["P0007", "R0001", idr(300n), "pending", ["DQ-25", "DQ-19"]], // admitted, under review; not compared with the payout (DQ-14)
+      ["P0008", "R0001", idr(400n), "unknown_status", ["DQ-25"]],
+      ["P0009", "R0004", idr(500n), "reservation_excluded", ["DQ-05"]],
+    ]);
+    expect(all.apart.unallocatedAmount).toEqual(idr(700n));
+    expect(all.apart.heldAmount).toEqual(idr(1200n));
+    // P0004, P0005 (DQ-03) and P0006 (DQ-06) are wrong rows: excluded, neither held nor unallocated
 
-    const v001 = reconciliationOf(snapshot, filtersOf(snapshot, { property: "V001", from: "2026-09-11", to: "2026-09-30" }));
-    expect(v001.unallocated.map((u) => u.paymentId)).toEqual(["P0003"]);
-    const october = reconciliationOf(snapshot, filtersOf(snapshot, { property: "V002", from: "2026-10-01", to: "2026-10-31" }));
-    expect(october.unallocated.map((u) => u.paymentId)).toEqual(["P0004"]);
+    const v001 = reconciliationOf(snapshot, filtersOf(snapshot, { property: "V001", from: "2026-09-12", to: "2026-09-30" }));
+    expect(v001.apart.unallocated).toEqual([]);
+    expect(v001.apart.held.map((u) => u.paymentId)).toEqual(["P0008"]);
+    expect(reconciliationOf(snapshot, filtersOf(snapshot, { from: "2026-10-01", to: "2026-10-31" })).apart.held.map((u) => u.paymentId)).toEqual(["P0009"]);
+    // a pending payment the checks admitted follows the review switch, as the calculator's pending does
+    const off = reconciliationOf(snapshot, filtersOf(snapshot, { review: "off" }));
+    expect(off.apart.held.map((u) => u.paymentId)).toEqual(["P0008", "P0009"]);
   });
 
-  it("an unparsed amount is listed, not summed", async () => {
-    const s = await snapshotOf({ property: [PROPERTY], payment: [{ ...PAYMENT, amount: "n/a" }] });
+  it("a payment in another currency is listed, not summed", async () => {
+    const usd = { ...PROPERTY, property_id: "V002", base_currency: "USD" };
+    const s = await snapshotOf({ property: [PROPERTY, usd], payment: [{ ...PAYMENT, property_id: "V002", currency: "USD", reservation_id: "R0099" }] });
     const r = reconciliationOf(s, filtersOf(s));
-    expect(r.unallocated.map((u) => [u.paymentId, u.amount])).toEqual([["P0001", null]]);
-    expect(r.unallocatedAmount).toEqual(idr(0n));
+    expect(r.apart.unallocated.map((u) => [u.paymentId, u.amount])).toEqual([["P0001", { amount: 255000000n, currency: "USD" }]]);
+    expect(r.apart.unallocatedAmount).toEqual(idr(0n));
   });
 });

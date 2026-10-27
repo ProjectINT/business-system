@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCases } from "./cases";
-import { apart, datasetFrom, PAYMENT, PROPERTY, RESERVATION } from "./testing/fixture";
+import { apart, COMMISSION_RULE, datasetFrom, PAYMENT, PROPERTY, RESERVATION } from "./testing/fixture";
 import { dq01, dq02, dq03 } from "./checks";
 import { runOn } from "./testing/run";
 
@@ -14,11 +14,12 @@ const res = (reservation_id: string, check_in: string, check_out: string, extra:
 
 const ds = datasetFrom({
   property: [PROPERTY, { ...PROPERTY, property_id: "V002" }],
+  commission_rule: [COMMISSION_RULE, { ...COMMISSION_RULE, property_id: "V002" }],
   reservation: [
     res("R0001", "2026-09-01", "2026-09-05"),
     res("R0002", "2026-09-03", "2026-09-07", { status: "modified" }), // in a group with R0001
     res("R0003", "2026-09-10", "2026-09-12", { status: "modified" }), // alone
-    res("R0003", "2026-09-10", "2026-09-12", { status: "modified", gross_booking_value: "5" }), // a second version of it
+    res("R0003", "2026-09-10", "2026-09-12", { status: "modified", gross_booking_value: "5" }), // a second version of it, the same updated_at
     res("R0004", "2026-09-10", "2026-09-12", { status: "modified", property_id: "V999" }), // excluded: no case
     res("R0005", "2026-09-20", "2026-09-22", { property_id: "V002" }),
     res("R0006", "2026-09-20", "2026-09-22", { property_id: "V002" }),

@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { describeContract } from "../testing/contract";
-import { datasetFrom, PROPERTY, RESERVATION } from "../testing/fixture";
+import { COMMISSION_RULE, PROPERTY, RESERVATION, datasetFrom } from "../testing/fixture";
 import { contextBefore, resultFor, runOn, skipsAlone, statusOf } from "../testing/run";
 import { dq18 } from "./dq18-partial-refund-on-cancel";
 
 const cancelled = { ...RESERVATION, status: "cancelled" };
 const ds = datasetFrom({
   property: [PROPERTY, { ...PROPERTY, property_id: "V002", base_currency: "USD" }],
+  commission_rule: [COMMISSION_RULE, { ...COMMISSION_RULE, property_id: "V002" }],
   reservation: [
     RESERVATION,
     { ...cancelled, reservation_id: "R0002", refund_amount: "3000000" },
@@ -36,7 +37,7 @@ describe("DQ-18", () => {
 
   it("skips a row already out, and alone unparsed values", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-18", "R0006").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-18", "R0006").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     const bad = datasetFrom({
       reservation: [
         { ...RESERVATION, status: "" },

@@ -1,6 +1,6 @@
 // Final status of a row from its results and the decision in force (VALIDATION_PLAN.md 4):
-//   0. displaced pending row                        → superseded
-//   1. fail with duplicate                          → duplicate
+//   0. displaced pending row                        → superseded, no rule
+//   1. fail with duplicate                          → duplicate; else fail with supersede (DQ-02) → superseded
 //   2. fail with exclude, or decision exclude       → excluded
 //   3. fail with decide and no decision, or hold    → pending
 //   4. fail with review, or decision finance_only   → review
@@ -26,6 +26,9 @@ export function verdictFor(unit: RowUnit, results: readonly RuleResult[], decisi
 
   const duplicate = fails("duplicate");
   if (duplicate.length > 0) return { ...base, status: "duplicate", ruleIds: duplicate, decisionId: null };
+
+  const supersede = fails("supersede");
+  if (supersede.length > 0) return { ...base, status: "superseded", ruleIds: supersede, decisionId: null };
 
   const exclude = fails("exclude");
   if (exclude.length > 0 || decision?.kind === "exclude") {

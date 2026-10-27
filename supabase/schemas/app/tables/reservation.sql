@@ -9,7 +9,8 @@ create table app.reservation (
   check_in date not null,
   check_out date not null,
   status text not null,
-  gross_booking_value numeric(18, 2) not null,
+  gross_booking_value numeric(18, 2) not null,  -- проживание без PBJT
+  pbjt numeric(18, 2),  -- PBJT, налог к уплате, не выручка (PLAN.md 7.2); null — источник не прислал (CSV), в расчёте 0
   currency text not null,
   ota_fee numeric(18, 2) not null,
   refund_amount numeric(18, 2) not null,

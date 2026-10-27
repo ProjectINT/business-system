@@ -30,6 +30,7 @@ describe("calculateOverview", () => {
         synthetic({
           reservationId: "X2",
           gross: money(100n, "USD"),
+          pbjt: money(0n, "USD"),
           otaFee: money(0n, "USD"),
           refund: money(0n, "USD"),
         }),
@@ -37,6 +38,7 @@ describe("calculateOverview", () => {
           reservationId: "X3",
           status: "cancelled",
           gross: money(5n, "USD"),
+          pbjt: money(0n, "USD"),
           otaFee: money(0n, "USD"),
           refund: money(0n, "USD"),
         }),

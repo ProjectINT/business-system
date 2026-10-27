@@ -17,6 +17,7 @@ describe("calculateCashFlow", () => {
   it("only paid expenses leave cash", () => {
     expect(calculateCashFlow([PAY.P0010, PAY.P0055], [EXP.E0018, EXP.E0057], scope())).toEqual({
       received: idr(2990297n + 7312184n),
+      pending: idr(0n),
       paidExpenses: idr(325200n),
       netCashFlow: idr(2990297n + 7312184n - 325200n),
     });
@@ -28,6 +29,20 @@ describe("calculateCashFlow", () => {
     expect(calculateCashFlow([PAY.P0010], [], scope({ propertyIds: new Set(["V013"]) })).received).toEqual(idr(0n));
     expect(calculateCashFlow([], [], scope()).netCashFlow).toEqual(idr(0n));
   });
+
+  it("a pending payment is not money yet: apart from received, out of the net cash flow", () => {
+    const pending: PaymentInput = { ...PAY.P0055, status: "pending" };
+    expect(calculateCashFlow([PAY.P0010, pending], [], scope())).toEqual({
+      received: idr(2990297n),
+      pending: idr(7312184n),
+      paidExpenses: idr(0n),
+      netCashFlow: idr(2990297n),
+    });
+    expect(calculateCashFlow([{ ...pending, dqStatus: "review" }], [], scope({ includeReview: false })).pending).toEqual(idr(0n));
+  });
+
+  it("rejects an unknown payment status", () =>
+    expectCode(() => calculateCashFlow([{ ...PAY.P0010, status: "refunded" as PaymentInput["status"] }], [], scope()), "UNKNOWN_STATUS"));
 
   it("rejects an unknown expense status", () =>
     expectCode(

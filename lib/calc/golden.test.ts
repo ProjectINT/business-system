@@ -29,19 +29,23 @@ describe("golden: V011, September 2026", () => {
       gross: idr(26791884n),
       refund: idr(0n),
       otaFee: idr(3603816n),
-      otaFeeByChannel: { OTA: idr(1994230n), Direct: idr(1609586n) }, // R0143 + R0067; R0020 + R0110
+      otaFeeByChannel: { OTA: idr(1994230n), Direct: idr(1609586n), unknown: idr(0n) }, // R0143 + R0067; R0020 + R0110
+      pbjt: idr(0n), // the CSV has no PBJT
       netRental: idr(23188068n),
-      managementFee: idr(4554620n),
+      managementFee: idr(4554621n), // per night: 1 182 360 + 612 471 + 1 412 582 + 1 347 208; v1 4 554 620
+      ownerEstimate: idr(18633447n), // 23 188 068 − 4 554 621
       operatingExpenses: idr(1103588n),
       cancellations: { count: 0, gross: idr(0n), refund: idr(0n), retained: idr(0n) },
     });
-    expect(overview.portfolio.ownerBalance.amount).toEqual(idr(17529860n));
+    expect(overview.portfolio.ownerBalance.amount).toEqual(idr(17529859n)); // v1: 17 529 860
     expect(overview.portfolio.ownerBalance.isEstimate).toBe(true);
+    expect(overview.portfolio.ownerEstimate).toMatchObject({ amount: idr(18633447n), isEstimate: true });
   });
 
   it("cash flow", () => {
     expect(overview.portfolio.cashFlow).toEqual({
       received: idr(10302481n),
+      pending: idr(0n),
       paidExpenses: idr(325200n),
       netCashFlow: idr(9977281n),
     });

@@ -1,6 +1,7 @@
 -- Поступления денег по броням. Происхождение и история версий — как в app.property.
--- Платёж без брони или по исключённой брони сюда не попадает (DQ-05): его сумма показывается
--- как «нераспределено» из staging.
+-- Платёж без брони или по исключённой брони сюда не попадает (DQ-05): его сумма показывается из staging
+-- как «не привязано» (брони нет) или «удержано» (бронь исключена), PLAN.md 7.4. Платёж pending сюда попадает
+-- (DQ-25, info), но это ещё не деньги: в поступления не входит, его сумма — тоже «удержано».
 -- Совпадение объекта платежа с объектом брони не ограничивается: расхождение уходит в review (DQ-19).
 create table app.payment (
   payment_id text primary key,
@@ -15,7 +16,7 @@ create table app.payment (
   constraint payment_id_format check (payment_id ~ '^P\d{4}$'),
   constraint payment_amount_not_negative check (amount >= 0),  -- нулевые поступления по отменам бывают (DQ-15)
   -- в источнике только received; смысл других статусов движку неизвестен
-  constraint payment_status_known check (status in ('received')),
+  constraint payment_status_known check (status in ('received', 'pending')),
   constraint payment_property_currency_fkey
   foreign key (property_id, currency) references app.property (property_id, base_currency)
 );

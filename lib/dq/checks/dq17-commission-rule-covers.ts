@@ -1,20 +1,11 @@
-// DQ-17 commissionRuleCovers: a rule of the villa is in force on the check-in date and the rate does
-// not change inside the stay (the fee is taken at the check-in rate; PLAN.md decision log 2026-10-18).
-// Uses lib/calc's own resolver, so the rule the check sees is the rule the calculation will use.
-import { commissionRulesOn, eachNight, rateToString, resolveCommissionRule, type CalendarDate, type CommissionRuleInput } from "../../calc";
+// DQ-17 commissionRuleCovers (v2): every night of the stay has the one rule lib/calc will take for it.
+// Each night is charged at its own rate (PLAN.md 7.2), so a rate change inside the stay is fine; a night
+// with no rule, or with rules the policy `commissionRuleOverlap` cannot choose between, leaves the fee
+// unknown — the reservation is excluded (ТЗ п. 14 of the final test: no rule is made up) and comes back
+// when a file of rules covers the night. Asks lib/calc's own resolver: the check sees the calculation's rule.
+import { eachNight, findCommissionRule, type CommissionRuleInput } from "../../calc";
 import type { Check, CheckContext, CheckResult, RowUnit } from "../types";
 import { amountIdrOf, commissionRulesInForce, fail, isOutUnit, nightsOf, pass, propertyIndex, skip, SKIP } from "./common";
-
-type Resolved = { readonly rule: CommissionRuleInput } | { readonly problem: "no_rule" | "ambiguous" };
-
-/** The calculation's own choice of rule, or why there is none: no rule covers the date, or two start on the same latest date. */
-function resolve(rules: readonly CommissionRuleInput[], propertyId: string, date: CalendarDate): Resolved {
-  const matches = commissionRulesOn(rules, propertyId, date);
-  if (matches.length === 0) return { problem: "no_rule" };
-  const latestFrom = matches.reduce((max, r) => (r.effectiveFrom > max ? r.effectiveFrom : max), matches[0]!.effectiveFrom);
-  if (matches.filter((r) => r.effectiveFrom === latestFrom).length > 1) return { problem: "ambiguous" };
-  return { rule: resolveCommissionRule(rules, propertyId, date) };
-}
 
 function check(ctx: CheckContext, rules: readonly CommissionRuleInput[], known: ReadonlySet<string>, u: RowUnit<"reservation">): CheckResult {
   const { property_id, check_in, check_out, status } = u.values;
@@ -26,28 +17,19 @@ function check(ctx: CheckContext, rules: readonly CommissionRuleInput[], known: 
   if (!known.has(property_id)) return skip(u, SKIP.propertyUnknown);
   if (nightsOf(u)! <= 0) return skip(u, SKIP.noStay); // dates parsed above
 
-  const atCheckIn = resolve(rules, property_id, check_in);
-  if ("problem" in atCheckIn) return fail(u, { details: { problem: atCheckIn.problem, date: check_in }, amountIdr: amountIdrOf(u) });
-  const rate = rateToString(atCheckIn.rule.rate);
   for (const night of eachNight(check_in, check_out)) {
-    const r = resolve(rules, property_id, night);
-    const nightRate = "rule" in r ? rateToString(r.rule.rate) : null;
-    if (nightRate !== rate) {
-      return fail(u, {
-        details: { problem: "rate_changes", checkInRate: rate, from: night, rateFrom: nightRate },
-        amountIdr: amountIdrOf(u),
-      });
-    }
+    const found = findCommissionRule(rules, property_id, night, ctx.policies.commissionRuleOverlap);
+    if ("problem" in found) return fail(u, { details: { problem: found.problem, date: night }, amountIdr: amountIdrOf(u) });
   }
   return pass(u);
 }
 
 export const dq17: Check = {
   id: "DQ-17",
-  version: 1,
-  title: "Commission rule covers the stay",
+  version: 2,
+  title: "Commission rule covers every night",
   entity: "reservation",
-  action: "review",
+  action: "exclude",
   engine: "ts",
   dependsOn: ["DQ-04", "DQ-06", "DQ-07", "DQ-09", "DQ-22"],
   async run(ctx: CheckContext): Promise<CheckResult[]> {

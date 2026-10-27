@@ -36,7 +36,7 @@ export function fail(u: AnyUnit, extra: FailExtra): CheckResult {
 /** Reasons for `skip`, worded once so that the journal and the tests agree. */
 export const SKIP = {
   notParsed: (field: string) => `${field} not parsed (DQ-03)`,
-  out: "row excluded or duplicate by an earlier rule",
+  out: "row excluded, duplicate or superseded by an earlier rule",
   cancelled: "cancelled reservation",
   notCancelled: "not a cancellation",
   notModified: "status is not modified",
@@ -58,9 +58,9 @@ export const SKIP = {
 
 // ── statuses ────────────────────────────────────────────────────────────────
 
-/** `duplicate` or `excluded`: the row is out of the data, later rules skip it. */
+/** Out of every later rule: an excluded row, an exact copy, or an older version of a reservation (DQ-02). */
 export function isOut(status: Status): boolean {
-  return status === "duplicate" || status === "excluded";
+  return status === "duplicate" || status === "excluded" || status === "superseded";
 }
 
 export function isOutUnit(ctx: CheckContext, u: RowUnit): boolean {
@@ -87,12 +87,19 @@ export function isActive(r: RowUnit<"reservation">): boolean {
   return r.values.status === "confirmed" || r.values.status === "modified";
 }
 
-/** GBV − OTA − refund: what the channel should pay out (PLAN.md 7.4); zero for a cancellation. */
+/** PBJT of a reservation row: the CSV has no column — 0 (PLAN.md 15); the event feed brings one; `null` — it did not parse. */
+export function pbjtOf(r: RowUnit<"reservation">): bigint | null {
+  const pbjt = (r.values as { pbjt?: bigint | null }).pbjt;
+  return pbjt === undefined ? 0n : pbjt;
+}
+
+/** A + PBJT − OTA − refund: what the channel should pay out (PLAN.md 7.4, lib/calc's calculateExpectedPayout); zero for a cancellation. */
 export function expectedPayout(r: RowUnit<"reservation">): bigint | null {
   const { gross_booking_value, ota_fee, refund_amount, status } = r.values;
-  if (status === null || gross_booking_value === null || ota_fee === null || refund_amount === null) return null;
+  const pbjt = pbjtOf(r);
+  if (status === null || gross_booking_value === null || ota_fee === null || refund_amount === null || pbjt === null) return null;
   if (status === "cancelled") return 0n;
-  return gross_booking_value - ota_fee - refund_amount;
+  return gross_booking_value + pbjt - ota_fee - refund_amount;
 }
 
 // ── lookups over the effective set ──────────────────────────────────────────
@@ -128,8 +135,9 @@ export type ReservationLookup =
   | { readonly kind: "found"; readonly row: RowUnit<"reservation">; readonly status: Status };
 
 /**
- * Reservations by id, as a payment sees them: exact duplicates do not count, excluded rows are
- * reported as such, several live versions are ambiguous, otherwise the one live row with its status.
+ * Reservations by id, as a payment sees them: exact duplicates and older versions (DQ-02 `superseded`)
+ * do not count, excluded rows are reported as such, several live versions are ambiguous, otherwise the
+ * one live row with its status.
  */
 export function reservationLookup(ctx: CheckContext): (reservationId: string) => ReservationLookup {
   const byKey = new Map<string, RowUnit<"reservation">[]>();
@@ -143,7 +151,10 @@ export function reservationLookup(ctx: CheckContext): (reservationId: string) =>
   return (id) => {
     const cached = cache.get(id);
     if (cached !== undefined) return cached;
-    const rows = (byKey.get(id) ?? []).filter((r) => ctx.statusSoFar(r.unitId) !== "duplicate");
+    const rows = (byKey.get(id) ?? []).filter((r) => {
+      const status = ctx.statusSoFar(r.unitId);
+      return status !== "duplicate" && status !== "superseded";
+    });
     let found: ReservationLookup;
     if (rows.length === 0) found = { kind: "missing" };
     else {
@@ -157,12 +168,15 @@ export function reservationLookup(ctx: CheckContext): (reservationId: string) =>
   };
 }
 
-/** Payments that count, by reservation id: parsed, not excluded or duplicate. A held payment counts: it is real money. */
+/**
+ * Payments that count, by reservation id: parsed, received (a `pending` one is not money yet, DQ-25),
+ * not excluded or duplicate. A held payment counts: it is real money.
+ */
 export function paymentsByReservation(ctx: CheckContext): ReadonlyMap<string, Rows<"payment">> {
   const index = new Map<string, RowUnit<"payment">[]>();
   for (const p of ctx.units("payment")) {
     const id = p.values.reservation_id;
-    if (id === null || p.values.amount === null || p.values.payment_date === null || isOutUnit(ctx, p)) continue;
+    if (id === null || p.values.amount === null || p.values.payment_date === null || p.values.status !== "received" || isOutUnit(ctx, p)) continue;
     const list = index.get(id) ?? [];
     list.push(p);
     index.set(id, list);

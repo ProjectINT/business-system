@@ -47,7 +47,10 @@ const REFUND_PROBLEM: Record<string, (d: Details) => string> = {
 
 const FAIL: Readonly<Record<RuleId, (d: Details) => string>> = {
   "DQ-01": (d) => `Exact copy of line ${num(d.firstLineNo)} of the same file`,
-  "DQ-02": (d) => `${plural(d.versions, "version")} of this id with different content · updated_at ${d.updatedAt === null ? "empty" : str(d.updatedAt)}`,
+  "DQ-02": (d) =>
+    d.latestUpdatedAt !== undefined
+      ? `Older version, updated_at ${str(d.updatedAt)}: the one of ${str(d.latestUpdatedAt)} stands`
+      : `${plural(d.versions, "version")} of this id with different content · updated_at ${d.updatedAt === null ? "empty" : str(d.updatedAt)}`,
   "DQ-03": (d) =>
     list<{ field: string | null; value: string | null; message: string }>(d.issues)
       .map((i) => `${i.field ?? "row"}: ${i.message}${i.value ? ` (“${i.value}”)` : ""}`)
@@ -75,32 +78,29 @@ const FAIL: Readonly<Record<RuleId, (d: Details) => string>> = {
   "DQ-13": () => "Modified booking with no link to the reservation it replaces",
   "DQ-14": (d) => {
     const above = d.aboveGross === true ? `more than GBV ${num(d.gross)}` : "";
-    if (d.difference === 0n) return `Paid ${num(d.amount)} as GBV − OTA − refund gives, but ${above}`;
-    return `Paid ${num(d.amount)}, expected GBV − OTA − refund = ${num(d.expected)} (${signed(d.difference)})${above === "" ? "" : `, ${above}`}`;
+    if (d.difference === 0n) return `Paid ${num(d.amount)} as GBV + PBJT − OTA − refund gives, but ${above}`;
+    return `Paid ${num(d.amount)}, expected GBV + PBJT − OTA − refund = ${num(d.expected)} (${signed(d.difference)})${above === "" ? "" : `, ${above}`}`;
   },
   "DQ-15": () => "Zero amount marked received",
-  "DQ-16": (d) =>
-    d.payments === 0
+  "DQ-16": (d) => {
+    if (d.kind === "paid_late") {
+      return `Paid in full on ${str(d.paidOn)}, ${plural(d.daysLate, "day")} after check-in ${str(d.checkIn)} · ${num(d.shortfall)} was missing at check-in`;
+    }
+    return d.payments === 0
       ? `Nothing paid; ${num(d.expected)} was due by check-in ${str(d.checkIn)}`
-      : `Paid ${num(d.paidByCheckIn)} of ${num(d.expected)} by check-in ${str(d.checkIn)}, ${num(d.paidLater)} later · short ${num(d.shortfall)} at check-in`,
+      : `Paid ${num(d.paidByCheckIn)} of ${num(d.expected)} by check-in ${str(d.checkIn)}, ${num(d.paidLater)} later · still owed ${num(d.outstanding)}`;
+  },
   "DQ-17": (d) =>
     d.problem === "no_rule"
-      ? `No commission rule in force on check-in ${str(d.date)}`
-      : d.problem === "ambiguous"
-        ? `Two commission rules in force on check-in ${str(d.date)} start on the same date`
-        : `Rate ${str(d.checkInRate)} at check-in becomes ${d.rateFrom === null ? "no rule" : str(d.rateFrom)} from ${str(d.from)}`,
+      ? `No commission rule in force on the night of ${str(d.date)}`
+      : `Several commission rules in force on the night of ${str(d.date)}, none can be chosen`,
   "DQ-18": (d) => `Cancelled with a partial refund: ${num(d.refund)} of ${num(d.gross)} refunded, ${num(d.retained)} retained`,
   "DQ-19": (d) => `Payment on villa ${str(d.paymentProperty)}, its reservation on ${str(d.reservationProperty)}`,
   "DQ-20": (d) => `Dated ${str(d.date)}, ${plural(d.daysAfter, "day")} after today, ${str(d.today)}`,
   "DQ-22": (d) =>
-    `Rate ${d.rate === null ? "?" : str(d.rate)}; ${list<{ other: string; from: string; to: string | null; inForce: string }>(d.overlaps)
-      .map((o) => `overlaps ${o.other} ${o.from} → ${o.to ?? "open end"}, where ${o.inForce} applies`)
+    `Rate ${d.rate === null ? "?" : str(d.rate)}; ${list<{ other: string; from: string; to: string | null; inForce: string | null }>(d.overlaps)
+      .map((o) => `overlaps ${o.other} ${o.from} → ${o.to ?? "open end"}, ${o.inForce === null ? "no rate there: stays with those nights are excluded (DQ-17)" : `where ${o.inForce} applies`}`)
       .join("; ")}`,
-  "DQ-23": (d) => {
-    const afterOut = typeof d.daysAfterCheckOut === "number" ? d.daysAfterCheckOut : NaN;
-    const out = afterOut > 0 ? `${plural(afterOut, "day")} after check-out` : afterOut === 0 ? "on the check-out day" : "before check-out";
-    return `Paid ${str(d.paymentDate)}, ${plural(d.daysAfterCheckIn, "day")} after check-in ${str(d.checkIn)}, ${out}`;
-  },
   "DQ-24": (d) => {
     const days = typeof d.daysToCheckIn === "number" ? d.daysToCheckIn : NaN;
     const when =
@@ -114,6 +114,10 @@ const FAIL: Readonly<Record<RuleId, (d: Details) => string>> = {
     const zero = typeof d.zeroPayments === "number" && d.zeroPayments > 0 ? ` (${plural(d.zeroPayments, "zero payment")} only)` : "";
     return `Confirmed, but no payment on file${zero}${when}`;
   },
+  "DQ-25": (d) =>
+    d.status === "pending"
+      ? "Pending: not received yet, held apart from what was received"
+      : `Status “${str(d.status)}” is neither received nor pending: excluded, the amount held`,
   "DQ-90": (d) => `The loader read ${plural(d.rowCount, "row")}, the run checked ${num(d.rows)}`,
 };
 

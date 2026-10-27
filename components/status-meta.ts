@@ -15,7 +15,7 @@ export const STATUS_META: Record<Status, { label: string; color: ChipColor; desc
   },
   excluded: { label: "Excluded", color: "danger", description: "Not in the figures, shown apart" },
   duplicate: { label: "Duplicate", color: "default", description: "Exact copy of another row, dropped" },
-  superseded: { label: "Superseded", color: "default", description: "Replaced by a newer version" },
+  superseded: { label: "Superseded", color: "default", description: "Replaced by a version with a later updated_at, not in the figures" },
 };
 
 /** Statuses in the order the UI lists them. */
@@ -23,6 +23,7 @@ export const STATUS_ORDER: readonly Status[] = ["clean", "review", "pending", "e
 
 export const ACTION_LABEL: Record<Action, string> = {
   duplicate: "dropped as a duplicate",
+  supersede: "replaced by a newer version",
   exclude: "excluded",
   decide: "awaits a decision",
   hold: "waits for its reservation's decision",
@@ -33,6 +34,7 @@ export const ACTION_LABEL: Record<Action, string> = {
 /** A rule's badge takes the colour of the status its action gives the row. */
 export const ACTION_COLOR: Record<Action, ChipColor> = {
   duplicate: "default",
+  supersede: "default",
   exclude: "danger",
   decide: "accent",
   hold: "accent",
@@ -60,7 +62,6 @@ export const OWNER_BALANCE_GAP_LABEL: Record<OwnerBalanceGap, string> = {
   owner_payouts: "Payouts to owners",
   opening_balance: "Opening balances",
   taxes: "Taxes: PB1 on stays, VAT on management fees",
-  ota_fee_bearer: "Who bears the OTA fee (assumed: the owner)",
   mf_base_on_refunds: "Management fee base when there are refunds",
   fx_rates: "Exchange rates",
 };

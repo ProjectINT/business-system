@@ -10,6 +10,7 @@ create table app.stg_reservation (
   check_out date,
   status text,
   gross_booking_value numeric,
+  pbjt numeric,  -- null — в файле нет колонки (CSV) или значение не разобралось
   currency text,
   ota_fee numeric,
   refund_amount numeric,

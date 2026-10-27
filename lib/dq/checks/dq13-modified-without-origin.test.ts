@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { describeContract } from "../testing/contract";
-import { datasetFrom, PROPERTY, RESERVATION } from "../testing/fixture";
+import { COMMISSION_RULE, PROPERTY, RESERVATION, datasetFrom } from "../testing/fixture";
 import { contextBefore, resultFor, runOn, skipsAlone, statusOf } from "../testing/run";
 import { dq13, modificationCaseKey } from "./dq13-modified-without-origin";
 
 const ds = datasetFrom({
   property: [PROPERTY],
+  commission_rule: [COMMISSION_RULE],
   reservation: [
     RESERVATION,
     { ...RESERVATION, reservation_id: "R0002", status: "modified", updated_at: "2026-09-20" },
@@ -32,7 +33,7 @@ describe("DQ-13", () => {
 
   it("skips a modified reservation already out, and alone one whose status did not parse", async () => {
     const report = await runOn(ds);
-    expect(resultFor(report, "DQ-13", "R0004").reason).toBe("row excluded or duplicate by an earlier rule");
+    expect(resultFor(report, "DQ-13", "R0004").reason).toBe("row excluded, duplicate or superseded by an earlier rule");
     expect(statusOf(report, "R0004")).toBe("excluded");
     expect(await skipsAlone(dq13, datasetFrom({ reservation: [{ ...RESERVATION, status: "" }] }))).toEqual({ R0001: "status not parsed (DQ-03)" });
   });

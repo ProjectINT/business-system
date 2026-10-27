@@ -107,7 +107,7 @@ function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<string, 
  * Суммы после разбора — `bigint`, а JSON.stringify на bigint падает с ошибкой. Поэтому функция-заменитель
  * (второй аргумент JSON.stringify) записывает их строкой вида "4000000n".
  */
-function contentKey(record: object, idField: string): string {
+export function contentKey(record: object, idField: string): string {
   const entries = Object.entries(record)
     .filter(([k]) => k !== idField)
     .sort(([a], [b]) => compareStrings(a, b));

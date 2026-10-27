@@ -1,0 +1,359 @@
+{
+  "case_id": "FINAL_VILLA_2026_ALL_EXCEPTIONS",
+  "report_months": [
+    "2026-11",
+    "2026-12"
+  ],
+  "properties": [
+    {
+      "property_id": "V01",
+      "base_currency": "IDR"
+    },
+    {
+      "property_id": "V02",
+      "base_currency": "IDR"
+    },
+    {
+      "property_id": "V03",
+      "base_currency": "IDR"
+    },
+    {
+      "property_id": "V04",
+      "base_currency": "IDR"
+    }
+  ],
+  "commission_rules": [
+    {
+      "property_id": "V01",
+      "effective_from": "2026-11-01",
+      "effective_to": "2026-11-30",
+      "rate_bps": 1700
+    },
+    {
+      "property_id": "V01",
+      "effective_from": "2026-12-01",
+      "effective_to": "2026-12-31",
+      "rate_bps": 2000
+    },
+    {
+      "property_id": "V02",
+      "effective_from": "2026-11-01",
+      "effective_to": "2026-12-31",
+      "rate_bps": 1000
+    },
+    {
+      "property_id": "V01",
+      "effective_from": "2027-01-01",
+      "effective_to": null,
+      "rate_bps": 2200
+    },
+    {
+      "property_id": "V03",
+      "effective_from": "2026-11-01",
+      "effective_to": "2026-12-20",
+      "rate_bps": 1500
+    },
+    {
+      "property_id": "V03",
+      "effective_from": "2026-12-15",
+      "effective_to": null,
+      "rate_bps": 1800
+    }
+  ],
+  "reservation_events": [
+    {
+      "source_event_id": "E_R101_V1",
+      "reservation_id": "R101",
+      "property_id": "V01",
+      "updated_at": "2026-11-19T09:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-11-29",
+      "check_out": "2026-12-03",
+      "accommodation_gross_idr": 4000000,
+      "pbjt_idr": 400000,
+      "ota_fee_idr": 600000,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R101_V1",
+      "reservation_id": "R101",
+      "property_id": "V01",
+      "updated_at": "2026-11-19T09:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-11-29",
+      "check_out": "2026-12-03",
+      "accommodation_gross_idr": 4000000,
+      "pbjt_idr": 400000,
+      "ota_fee_idr": 600000,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R101_V2",
+      "reservation_id": "R101",
+      "property_id": "V01",
+      "updated_at": "2026-11-20T08:00:00Z",
+      "status": "modified",
+      "check_in": "2026-11-29",
+      "check_out": "2026-12-03",
+      "accommodation_gross_idr": 4400000,
+      "pbjt_idr": 440000,
+      "ota_fee_idr": 660000,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R202",
+      "reservation_id": "R202",
+      "property_id": "V02",
+      "updated_at": "2026-11-23T11:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-12-10",
+      "check_out": "2026-12-12",
+      "accommodation_gross_idr": 2000000,
+      "pbjt_idr": 200000,
+      "ota_fee_idr": 0,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R303",
+      "reservation_id": "R303",
+      "property_id": "V01",
+      "updated_at": "2026-12-01T11:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-12-15",
+      "check_out": "2026-12-17",
+      "accommodation_gross_idr": 10000,
+      "pbjt_idr": 1000,
+      "ota_fee_idr": 1500,
+      "currency": "USD"
+    },
+    {
+      "source_event_id": "E_R404_A",
+      "reservation_id": "R404",
+      "property_id": "V02",
+      "updated_at": "2026-11-25T10:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-12-20",
+      "check_out": "2026-12-22",
+      "accommodation_gross_idr": 3000000,
+      "pbjt_idr": 300000,
+      "ota_fee_idr": 450000,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R404_B",
+      "reservation_id": "R404",
+      "property_id": "V02",
+      "updated_at": "2026-11-25T10:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-12-20",
+      "check_out": "2026-12-23",
+      "accommodation_gross_idr": 4500000,
+      "pbjt_idr": 450000,
+      "ota_fee_idr": 675000,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R505",
+      "reservation_id": "R505",
+      "property_id": "V01",
+      "updated_at": "2026-11-05T10:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-11-10",
+      "check_out": "2026-11-13",
+      "accommodation_gross_idr": 3000000,
+      "pbjt_idr": 300000,
+      "ota_fee_idr": 0,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R505",
+      "reservation_id": "R505",
+      "property_id": "V01",
+      "updated_at": "2026-11-05T10:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-11-10",
+      "check_out": "2026-11-13",
+      "accommodation_gross_idr": 3300000,
+      "pbjt_idr": 330000,
+      "ota_fee_idr": 0,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R606",
+      "reservation_id": "R606",
+      "property_id": "V09",
+      "updated_at": "2026-11-28T09:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-12-05",
+      "check_out": "2026-12-07",
+      "accommodation_gross_idr": 1000000,
+      "pbjt_idr": 100000,
+      "ota_fee_idr": 150000,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R707",
+      "reservation_id": "R707",
+      "property_id": "V02",
+      "updated_at": "2026-11-02T09:00:00Z",
+      "status": "cancelled",
+      "check_in": "2026-11-15",
+      "check_out": "2026-11-17",
+      "accommodation_gross_idr": 1600000,
+      "pbjt_idr": 160000,
+      "ota_fee_idr": 240000,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R808",
+      "reservation_id": "R808",
+      "property_id": "V02",
+      "updated_at": "2026-11-03T09:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-11-20",
+      "check_out": "2026-11-20",
+      "accommodation_gross_idr": 800000,
+      "pbjt_idr": 80000,
+      "ota_fee_idr": 0,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R410",
+      "reservation_id": "R410",
+      "property_id": "V04",
+      "updated_at": "2026-10-20T09:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-11-05",
+      "check_out": "2026-11-07",
+      "accommodation_gross_idr": 2000000,
+      "pbjt_idr": 200000,
+      "ota_fee_idr": 0,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R310",
+      "reservation_id": "R310",
+      "property_id": "V03",
+      "updated_at": "2026-12-01T09:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-12-16",
+      "check_out": "2026-12-18",
+      "accommodation_gross_idr": 2400000,
+      "pbjt_idr": 240000,
+      "ota_fee_idr": 360000,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R311",
+      "reservation_id": "R311",
+      "property_id": "V03",
+      "updated_at": "2026-10-28T09:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-11-05",
+      "check_out": "2026-11-07",
+      "accommodation_gross_idr": 1800000,
+      "pbjt_idr": 180000,
+      "ota_fee_idr": 270000,
+      "currency": "IDR"
+    },
+    {
+      "source_event_id": "E_R112",
+      "reservation_id": "R112",
+      "property_id": "V01",
+      "updated_at": "2026-10-25T09:00:00Z",
+      "status": "confirmed",
+      "check_in": "2026-12-30",
+      "check_out": "2027-01-02",
+      "accommodation_gross_idr": 3000000,
+      "pbjt_idr": 300000,
+      "ota_fee_idr": 450000,
+      "currency": "IDR"
+    }
+  ],
+  "payments": [
+    {
+      "payment_id": "P101",
+      "reservation_id": "R101",
+      "payment_date": "2026-12-07",
+      "amount_idr": 4180000,
+      "status": "received"
+    },
+    {
+      "payment_id": "P101",
+      "reservation_id": "R101",
+      "payment_date": "2026-12-07",
+      "amount_idr": 4180000,
+      "status": "received"
+    },
+    {
+      "payment_id": "P202",
+      "reservation_id": "R202",
+      "payment_date": "2026-11-28",
+      "amount_idr": 2200000,
+      "status": "received"
+    },
+    {
+      "payment_id": "P303",
+      "reservation_id": "R101",
+      "payment_date": "2026-12-15",
+      "amount_idr": 50000,
+      "status": "pending"
+    },
+    {
+      "payment_id": "P404",
+      "reservation_id": "R999",
+      "payment_date": "2026-12-12",
+      "amount_idr": 100000,
+      "status": "received"
+    },
+    {
+      "payment_id": "P4040",
+      "reservation_id": "R404",
+      "payment_date": "2026-12-18",
+      "amount_idr": 2850000,
+      "status": "received"
+    },
+    {
+      "payment_id": "P5050",
+      "reservation_id": "R505",
+      "payment_date": "2026-11-08",
+      "amount_idr": 3300000,
+      "status": "received"
+    },
+    {
+      "payment_id": "P909",
+      "reservation_id": "R202",
+      "payment_date": "2026-12-11",
+      "amount_idr": 500000,
+      "status": "received"
+    },
+    {
+      "payment_id": "P909",
+      "reservation_id": "R202",
+      "payment_date": "2026-12-11",
+      "amount_idr": 550000,
+      "status": "received"
+    },
+    {
+      "payment_id": "P410",
+      "reservation_id": "R410",
+      "payment_date": "2026-11-01",
+      "amount_idr": 2200000,
+      "status": "received"
+    },
+    {
+      "payment_id": "P112",
+      "reservation_id": "R112",
+      "payment_date": "2026-10-30",
+      "amount_idr": 2850000,
+      "status": "received"
+    },
+    {
+      "payment_id": "P707",
+      "reservation_id": "R707",
+      "payment_date": "2026-11-14",
+      "amount_idr": 1000000,
+      "status": "failed"
+    }
+  ]
+}

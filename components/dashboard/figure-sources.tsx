@@ -7,28 +7,12 @@ import { Tooltip } from "@heroui/react";
 import type { View } from "@/lib/calc";
 import type { PropertyFigures, PropertySources } from "@/lib/data";
 import { count, idrFull } from "@/lib/format";
+import { SourcesBody, type Line, type Parts } from "@/components/shared/sources-body";
 import { RECONCILIATION_META } from "@/components/status-meta";
 
 type Figures = View<PropertyFigures>;
 type Sources = View<PropertySources>;
 export type FigureKey = keyof PropertyFigures;
-
-interface Line {
-  readonly key: string;
-  /** A record id, or a term of the owner balance. */
-  readonly label: string;
-  readonly detail?: string;
-  readonly value: number;
-}
-
-interface Parts {
-  readonly lines: Line[];
-  /** Records left out of the lines because they bring nothing to the figure. */
-  readonly note?: string;
-}
-
-/** Longer lists end with one line for the rest. */
-const MAX_LINES = 10;
 
 const DAY_MONTH = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 const day = (d: string) => DAY_MONTH.format(new Date(`${d}T00:00:00Z`));
@@ -141,59 +125,6 @@ function partsOf(id: FigureKey, s: Sources, f: Figures, underReview: boolean): P
       return { lines: terms.filter((t) => t.key !== "refund" || t.value !== 0) };
     }
   }
-}
-
-function SourcesBody({
-  title,
-  villa,
-  hint,
-  parts,
-  total,
-  format,
-  underReview,
-}: {
-  title: string;
-  villa: string;
-  hint: string;
-  parts: Parts;
-  total: number;
-  format: (v: number) => string;
-  underReview: boolean;
-}) {
-  const shown = parts.lines.length > MAX_LINES ? parts.lines.slice(0, MAX_LINES - 1) : parts.lines;
-  const rest = parts.lines.slice(shown.length);
-  return (
-    <div className="flex flex-col gap-2 p-1">
-      <div className="flex flex-col">
-        <span className="text-sm">
-          <span className={`font-medium ${underReview ? "text-warning" : ""}`}>
-            {underReview ? `${title}: records under review` : title}
-          </span>
-          <span className="text-muted"> · {villa}</span>
-        </span>
-        <span className="text-muted">{underReview ? "Not in the figure: what they would add to it" : hint}</span>
-      </div>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1">
-        {shown.map((l) => (
-          <div key={l.key} className="contents">
-            <span className="font-medium whitespace-nowrap">{l.label}</span>
-            <span className="text-muted">{l.detail}</span>
-            <span className="text-end tabular-nums whitespace-nowrap">{format(l.value)}</span>
-          </div>
-        ))}
-        {rest.length > 0 && (
-          <>
-            <span className="col-span-2 text-muted">{plural(rest.length, "more record")}</span>
-            <span className="text-end tabular-nums whitespace-nowrap">{format(rest.reduce((n, l) => n + l.value, 0))}</span>
-          </>
-        )}
-        <div className="col-span-3 border-t border-separator" />
-        <span className="col-span-2 font-medium">{underReview ? "Under review" : "Total"}</span>
-        <span className="text-end font-semibold tabular-nums whitespace-nowrap">{format(total)}</span>
-      </div>
-      {parts.note && <span className="text-muted">{parts.note}</span>}
-    </div>
-  );
 }
 
 /**

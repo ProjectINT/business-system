@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar, Chip, Separator } from "@heroui/react";
-import { ArrowDownToSquare, House } from "@gravity-ui/icons";
+import { ArrowDownToSquare, BranchesRight, House } from "@gravity-ui/icons";
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -14,10 +14,12 @@ type NavItem = {
   soon?: boolean;
 };
 
-// Dashboard = figures on the data that passed; Import = batches, raw rows, checks, reconciliation.
+// Dashboard = figures on the data that passed; Import = batches, raw rows, checks, reconciliation;
+// Events = the final test's event feed and how its figures came about (built-in JSON, no import).
 const NAV: NavItem[] = [
   { href: "/", label: "Dashboard", icon: House, match: [] },
   { href: "/import", label: "Import", icon: ArrowDownToSquare, match: ["/import"] },
+  { href: "/events", label: "Events", icon: BranchesRight, match: ["/events"] },
 ];
 
 function isActive(item: NavItem, pathname: string) {
